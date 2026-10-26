@@ -18,7 +18,9 @@ export default async function RugbyGamePage({ params }: Props) {
     <main>
       <SiteHeader />
       <section className="content pageTop">
-        <p className="eyebrow">{game.league.country?.name ?? "RUGBY"} · {game.league.name}</p>
+        <p className="eyebrow">
+          {game.league.country?.name ? `${game.league.country.name} · ` : ""}{game.league.name}
+        </p>
 
         <div className="matchHero">
           <div className="matchTeamHero">
@@ -42,8 +44,8 @@ export default async function RugbyGamePage({ params }: Props) {
         </div>
 
         <div className="matchFacts">
-          <div><span>Date</span><strong>{game.date || "TBD"}</strong></div>
-          <div><span>Time</span><strong>{game.time ?? "TBD"}</strong></div>
+          <div><span>Date</span><strong>{game.date || "—"}</strong></div>
+          <div><span>Time</span><strong>{game.time ?? "—"}</strong></div>
           <div><span>Competition</span><strong>{game.league.name}</strong></div>
           <div><span>Status</span><strong>{game.status.long}</strong></div>
         </div>
