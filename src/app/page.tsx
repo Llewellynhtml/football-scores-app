@@ -1,5 +1,4 @@
 import { CompetitionFilter } from "@/components/CompetitionFilter";
-import { DateNav } from "@/components/DateNav";
 import { FootballSidebar } from "@/components/FootballSidebar";
 import { MatchList } from "@/components/MatchList";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -73,7 +72,6 @@ export default async function Home({ searchParams }: PageProps) {
           </section>
 
           <section className="scorePanel">
-            <DateNav date={date} league={selectedCompetition?.routeKey} status={status} />
             <StatusFilter date={date} league={selectedCompetition?.routeKey} selected={status} />
             <CompetitionFilter
               date={date}
