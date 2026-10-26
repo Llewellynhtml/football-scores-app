@@ -109,7 +109,7 @@ async function apiArray(
   return Array.isArray(result) ? result : [];
 }
 
-function teamFrom(slug: string, raw: unknown, side: "home" | "away") {
+function teamFrom(raw: unknown, side: "home" | "away") {
   const visitorSide = side === "away" ? "visitors" : "home";
   const name = textValue(
     path(raw, ["teams", side, "name"]),
@@ -127,8 +127,8 @@ function teamFrom(slug: string, raw: unknown, side: "home" | "away") {
 }
 
 function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
-  const home = teamFrom(slug, raw, "home");
-  const away = teamFrom(slug, raw, "away");
+  const home = teamFrom(raw, "home");
+  const away = teamFrom(raw, "away");
 
   const status = textValue(
     path(raw, ["status", "short"]),
