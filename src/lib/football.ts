@@ -461,8 +461,11 @@ export async function searchTeams(query: string): Promise<TeamProfile[]> {
 export async function getTeamBySlug(slug: string): Promise<TeamProfile | null> {
   const search = slug.replace(/-/g, " ");
   const data = await apiGet<ApiTeam>("/teams", { search }, 43200);
-  const item = data[0];
-  return item ? mapTeam(item) : null;
+  const teams = data
+    .map(mapTeam)
+    .filter((team): team is TeamProfile => team !== null);
+
+  return teams.find((team) => slugify(team.name) === slug) ?? null;
 }
 
 export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
