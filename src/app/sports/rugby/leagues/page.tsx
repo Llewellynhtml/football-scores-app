@@ -39,9 +39,9 @@ export default async function RugbyLeaguesPage() {
           {leagues.slice(0, 60).map((league) => (
             <article className="featureCard" key={league.id}>
               {league.logo ? <Image src={league.logo} alt="" width={38} height={38} /> : null}
-              <span className="featureCode">{league.country?.name ?? "RUGBY"}</span>
+              {league.country?.name ? <span className="featureCode">{league.country.name}</span> : null}
               <h2>{league.name}</h2>
-              <p>{league.type ?? "Competition"}</p>
+              {league.type ? <p>{league.type}</p> : null}
               <div className="cardActions">
                 <Link href={`/sports/rugby/leagues/${league.id}`}>Open</Link>
               </div>
