@@ -93,8 +93,8 @@ async function apiGet<T>(
 function normalizeStatus(status: RawGame["status"]) {
   if (typeof status === "string") return { short: status, long: status };
   return {
-    short: status?.short ?? "TBD",
-    long: status?.long ?? status?.short ?? "To be determined",
+    short: status?.short ?? "",
+    long: status?.long ?? status?.short ?? "",
   };
 }
 
@@ -111,6 +111,8 @@ function countryObject(country: RugbyCountry) {
 }
 
 function mapGame(game: RawGame): RugbyGame | null {
+  const status = normalizeStatus(game.status);
+
   if (
     !validPositiveId(game?.id)
     || !validDateLike(game?.date)
@@ -120,35 +122,40 @@ function mapGame(game: RawGame): RugbyGame | null {
     || !validPositiveId(game?.teams?.away?.id)
     || !validName(game?.teams?.home?.name)
     || !validName(game?.teams?.away?.name)
+    || !validName(status.short)
     || !validNullableScore(game?.scores?.home)
     || !validNullableScore(game?.scores?.away)
   ) return null;
 
+  const league = game.league!;
+  const home = game.teams!.home!;
+  const away = game.teams!.away!;
+
   return {
     id: game.id,
-    date: game.date ?? "",
+    date: game.date!,
     time: game.time ?? null,
     timestamp: game.timestamp ?? null,
     timezone: game.timezone ?? null,
-    status: normalizeStatus(game.status),
+    status,
     league: {
-      id: game.league?.id ?? 0,
-      name: game.league?.name ?? "Rugby",
-      type: game.league?.type ?? null,
-      logo: game.league?.logo ?? null,
-      country: countryObject(game.league?.country),
-      season: game.league?.season ?? null,
+      id: league.id!,
+      name: league.name!,
+      type: league.type ?? null,
+      logo: league.logo ?? null,
+      country: countryObject(league.country),
+      season: league.season ?? null,
     },
     home: {
-      id: game.teams?.home?.id ?? 0,
-      name: game.teams?.home?.name ?? "Home",
-      logo: game.teams?.home?.logo ?? null,
+      id: home.id!,
+      name: home.name!,
+      logo: home.logo ?? null,
       score: game.scores?.home ?? null,
     },
     away: {
-      id: game.teams?.away?.id ?? 0,
-      name: game.teams?.away?.name ?? "Away",
-      logo: game.teams?.away?.logo ?? null,
+      id: away.id!,
+      name: away.name!,
+      logo: away.logo ?? null,
       score: game.scores?.away ?? null,
     },
   };
@@ -189,17 +196,40 @@ export async function getRugbyStandings(league: number, season: number): Promise
   );
 
   const table = data[0]?.league?.standings?.[0] ?? [];
-  return table.map((row, index) => ({
-    position: row.position ?? row.rank ?? index + 1,
-    team: row.team,
-    games: {
-      played: row.games?.played ?? row.all?.played ?? 0,
-      win: row.games?.win ?? row.all?.win ?? 0,
-      draw: row.games?.draw ?? row.all?.draw ?? 0,
-      lose: row.games?.lose ?? row.all?.lose ?? 0,
-    },
-    points: row.points ?? 0,
-    goalsDiff: row.goalsDiff ?? null,
-    form: row.form ?? null,
-  }));
+
+  return table.flatMap((row) => {
+    const position = row.position ?? row.rank;
+    const played = row.games?.played ?? row.all?.played;
+    const win = row.games?.win ?? row.all?.win;
+    const draw = row.games?.draw ?? row.all?.draw;
+    const lose = row.games?.lose ?? row.all?.lose;
+
+    if (
+      !validPositiveId(row?.team?.id)
+      || !validName(row?.team?.name)
+      || typeof position !== "number"
+      || !Number.isFinite(position)
+      || typeof played !== "number"
+      || !Number.isFinite(played)
+      || typeof win !== "number"
+      || !Number.isFinite(win)
+      || typeof draw !== "number"
+      || !Number.isFinite(draw)
+      || typeof lose !== "number"
+      || !Number.isFinite(lose)
+      || typeof row.points !== "number"
+      || !Number.isFinite(row.points)
+    ) {
+      return [];
+    }
+
+    return [{
+      position,
+      team: row.team,
+      games: { played, win, draw, lose },
+      points: row.points,
+      goalsDiff: row.goalsDiff ?? null,
+      form: row.form ?? null,
+    }];
+  });
 }
