@@ -1,8 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getCompetitionById } from "@/config/competitions";
 import type { Fixture } from "@/lib/football";
 import { matchUrl, teamUrl } from "@/lib/slug";
 import { timeInSouthAfrica } from "@/lib/dates";
+
+const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE"]);
 
 function displayStatus(match: Fixture) {
   if (match.status === "NS") return timeInSouthAfrica(match.date);
@@ -21,38 +24,64 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
   if (!fixtures.length) {
     return (
       <div className="emptyState">
-        <h3>No fixtures found</h3>
-        <p>Try another date or competition. Cached data will appear here once available.</p>
+        <div className="emptyIcon">⌁</div>
+        <h3>No matches found</h3>
+        <p>Try another date, competition or match-status filter.</p>
       </div>
     );
   }
 
   return (
     <div className="leagueList">
-      {Object.entries(grouped).map(([league, matches]) => (
-        <section className="leagueCard" key={league}>
-          <div className="leagueTitle">
-            <Image src={matches[0].league.logo} alt="" width={28} height={28} />
-            <h3>{league}</h3>
-          </div>
-          {matches.map((match) => (
-            <article className="matchRow" key={match.id}>
-              <div className="matchMeta"><span>{displayStatus(match)}</span></div>
-              <Link className="team" href={teamUrl(match.home.name)}>
-                <Image src={match.home.logo} alt="" width={26} height={26} />
-                <span>{match.home.name}</span>
-              </Link>
-              <Link className="score" href={matchUrl(match.home.name, match.away.name, match.id)}>
-                <strong>{match.home.goals ?? "-"}</strong><span>:</span><strong>{match.away.goals ?? "-"}</strong>
-              </Link>
-              <Link className="team away" href={teamUrl(match.away.name)}>
-                <span>{match.away.name}</span>
-                <Image src={match.away.logo} alt="" width={26} height={26} />
-              </Link>
-            </article>
-          ))}
-        </section>
-      ))}
+      {Object.entries(grouped).map(([league, matches]) => {
+        const featured = getCompetitionById(matches[0].league.id);
+        return (
+          <section className="leagueCard" key={league}>
+            <div className="leagueTitle">
+              <div className="leagueIdentity">
+                <Image src={matches[0].league.logo} alt="" width={24} height={24} />
+                <div>
+                  <small>{matches[0].league.country}</small>
+                  <h3>{matches[0].league.name}</h3>
+                </div>
+              </div>
+              {featured ? (
+                <Link className="leagueAction" href={`/standings/${featured.slug}`}>Standings</Link>
+              ) : (
+                <span className="leagueCount">{matches.length}</span>
+              )}
+            </div>
+
+            {matches.map((match) => {
+              const live = LIVE_STATUSES.has(match.status);
+              return (
+                <article className={live ? "matchRow liveRow" : "matchRow"} key={match.id}>
+                  <div className={live ? "matchMeta liveMeta" : "matchMeta"}>
+                    {live ? <span className="liveDot" /> : null}
+                    <span>{displayStatus(match)}</span>
+                  </div>
+
+                  <Link className="team" href={teamUrl(match.home.name)}>
+                    <Image src={match.home.logo} alt="" width={24} height={24} />
+                    <span>{match.home.name}</span>
+                  </Link>
+
+                  <Link className="score" href={matchUrl(match.home.name, match.away.name, match.id)}>
+                    <strong>{match.home.goals ?? "-"}</strong>
+                    <span>:</span>
+                    <strong>{match.away.goals ?? "-"}</strong>
+                  </Link>
+
+                  <Link className="team away" href={teamUrl(match.away.name)}>
+                    <span>{match.away.name}</span>
+                    <Image src={match.away.logo} alt="" width={24} height={24} />
+                  </Link>
+                </article>
+              );
+            })}
+          </section>
+        );
+      })}
     </div>
   );
 }
