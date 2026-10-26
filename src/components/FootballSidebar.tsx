@@ -18,14 +18,6 @@ export function FootballSidebar() {
           <span>Teams</span>
         </Link>
       </div>
-
-      <div className="sidebarSection">
-        <div className="sidebarLabel">Sports</div>
-        <Link className="sidebarItem" href="/sports">
-          <span className="sidebarIcon">＋</span>
-          <span>All sports</span>
-        </Link>
-      </div>
     </aside>
   );
 }
