@@ -46,7 +46,7 @@ export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]
             <div className="leagueIdentity">
               <SafeLogo src={group[0].logo} alt={group[0].competition} fallbackText={group[0].competition || icon} size={24} />
               <div>
-                <small>{group[0].country ?? "SPORT"}</small>
+                {group[0].country ? <small>{group[0].country}</small> : null}
                 <h3>{group[0].competition}</h3>
               </div>
             </div>
@@ -85,9 +85,9 @@ export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]
                 </div>
 
                 <div className="score">
-                  <strong>{event.homeScore ?? "-"}</strong>
+                  <strong>{event.homeScore ?? "—"}</strong>
                   <span>:</span>
-                  <strong>{event.awayScore ?? "-"}</strong>
+                  <strong>{event.awayScore ?? "—"}</strong>
                 </div>
 
                 <div className="team away">
