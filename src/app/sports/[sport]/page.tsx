@@ -1,60 +1,88 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { GenericEventList } from "@/components/GenericEventList";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getSport, isSportConfigured } from "@/sports/registry";
+import { SportDateNav } from "@/components/SportDateNav";
+import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
+import { getEventsByDate, sportHasKey } from "@/sports/generic/provider";
+import { getSport } from "@/sports/registry";
+import type { UnifiedSportEvent } from "@/sports/generic/types";
 
-type Props = { params: Promise<{ sport: string }> };
+type Props = {
+  params: Promise<{ sport: string }>;
+  searchParams: Promise<{ date?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { sport: slug } = await params;
   const sport = getSport(slug);
   if (!sport) return { title: "Sport not found" };
   return {
-    title: `${sport.name} | Live Sports`,
-    description: sport.description,
+    title: `${sport.name} Scores & Fixtures | Live Sports`,
+    description: `${sport.name} live scores, fixtures and results.`,
   };
 }
 
-export default async function SportPage({ params }: Props) {
-  const { sport: slug } = await params;
+export default async function SportPage({ params, searchParams }: Props) {
+  const [{ sport: slug }, query] = await Promise.all([params, searchParams]);
   const sport = getSport(slug);
   if (!sport) notFound();
-  if (sport.slug === "football") redirect("/");
+  if (slug === "football") redirect("/");
+  if (slug === "rugby") redirect(`/sports/rugby${query.date ? `?date=${query.date}` : ""}`);
 
-  const configured = isSportConfigured(sport);
+  const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
+  let events: UnifiedSportEvent[] = [];
+  let apiError = false;
+
+  try {
+    events = await getEventsByDate(slug, date);
+  } catch {
+    apiError = true;
+  }
 
   return (
     <main>
       <SiteHeader />
-      <section className="content pageTop">
-        <div className="sportLandingHero">
-          <div className="sportLandingIcon" aria-hidden="true">{sport.icon}</div>
+
+      <div className="sportScoreShell">
+        <section className="scoreboardIntro sportScoreIntro">
           <div>
-            <p className="eyebrow">SPORT MODULE</p>
-            <h1 className="pageTitle">{sport.name}</h1>
-            <p className="muted">{sport.description}</p>
+            <p className="eyebrow">{sport.name.toUpperCase()}</p>
+            <h1>{sport.name} scores</h1>
+            <p>{prettyDate(date)} · South Africa time</p>
           </div>
-        </div>
+          <div className="scoreboardMetric">
+            <span>{events.length}</span>
+            <small>events</small>
+          </div>
+        </section>
 
-        <div className="notice">
-          <strong>{configured ? "API key detected." : "Provider registered, API calls disabled."}</strong>
-          <p>
-            This sport is part of the shared platform architecture, but its live data adapter and
-            production routes will be activated in a later phase. No requests are being spent on
-            this sport yet.
-          </p>
-        </div>
+        <section className="scorePanel">
+          <SportDateNav sport={slug} date={date} />
 
-        <div className="modulePlan">
-          <div><span>1</span><p>Provider client and normalized event model</p></div>
-          <div><span>2</span><p>Scores and schedule pages</p></div>
-          <div><span>3</span><p>Competition and team pages</p></div>
-          <div><span>4</span><p>Sport-specific statistics and SEO pages</p></div>
-        </div>
+          {!sportHasKey(slug) && (
+            <div className="notice">
+              No API-Sports key is available to this module yet. Add <code>API_SPORTS_KEY</code> or the sport-specific key in Hostinger.
+            </div>
+          )}
 
-        <Link className="button" href="/sports">Back to all sports</Link>
-      </section>
+          {apiError && (
+            <div className="notice error">
+              {sport.name} data could not be loaded from API-Sports right now.
+            </div>
+          )}
+
+          <div className="sectionHeading compactScoreHeading">
+            <div>
+              <p className="eyebrow">LIVE DATA</p>
+              <h2>{prettyDate(date)}</h2>
+            </div>
+            <span className="badge">15 min free-tier cache</span>
+          </div>
+
+          <GenericEventList events={events} icon={sport.icon} />
+        </section>
+      </div>
     </main>
   );
 }
