@@ -28,7 +28,7 @@ export default async function RugbyLeaguePage({ params, searchParams }: Props) {
     <main>
       <SiteHeader />
       <section className="content pageTop">
-        <p className="eyebrow">{league.country?.name ?? "RUGBY"}</p>
+        {league.country?.name ? <p className="eyebrow">{league.country.name}</p> : null}
         <h1 className="pageTitle">{league.name}</h1>
         <p className="muted">{season ? `Season ${season}` : "Current competition schedule"}</p>
         <RugbyGameList games={games} />
