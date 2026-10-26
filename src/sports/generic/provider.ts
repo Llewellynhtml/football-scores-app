@@ -1,5 +1,6 @@
 import { getSport, SPORTS } from "@/sports/registry";
-import type { UnifiedSportEvent, SportApiStatus } from "@/sports/generic/types";
+import type { UnifiedSportEvent, SportApiStatus, EventValidationBatch } from "@/sports/generic/types";
+import { accept, createDiagnostics, reject, validDateLike, validName, validNullableScore } from "@/lib/data-validation";
 
 type JsonObject = Record<string, unknown>;
 
@@ -169,7 +170,7 @@ function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
   ) ?? "";
 
   return {
-    id: textValue(path(raw, ["id"])) ?? crypto.randomUUID(),
+    id: textValue(path(raw, ["id"])) ?? "",
     sport: slug,
     date,
     time: textValue(path(raw, ["time"])),
@@ -218,7 +219,7 @@ function normalizeMma(raw: unknown): UnifiedSportEvent {
   const status = textValue(path(raw, ["status", "short"]), path(raw, ["status"])) ?? "TBD";
 
   return {
-    id: textValue(path(raw, ["id"])) ?? crypto.randomUUID(),
+    id: textValue(path(raw, ["id"])) ?? "",
     sport: "mma",
     date: textValue(path(raw, ["date"])) ?? "",
     time: textValue(path(raw, ["time"])),
@@ -243,7 +244,7 @@ function normalizeMma(raw: unknown): UnifiedSportEvent {
 function normalizeRace(raw: unknown): UnifiedSportEvent {
   const date = textValue(path(raw, ["date"]), path(raw, ["date", "start"])) ?? "";
   return {
-    id: textValue(path(raw, ["id"])) ?? crypto.randomUUID(),
+    id: textValue(path(raw, ["id"])) ?? "",
     sport: "formula-1",
     date,
     time: textValue(path(raw, ["time"])),
@@ -277,26 +278,77 @@ export function sportHasKey(slug: string) {
   return Boolean(getApiKey(slug));
 }
 
-export async function getEventsByDate(slug: string, date: string): Promise<UnifiedSportEvent[]> {
+function validateEvent(event: UnifiedSportEvent, diagnostics: ReturnType<typeof createDiagnostics>) {
+  if (!event.id.trim()) {
+    reject(diagnostics, "missing_id");
+    return false;
+  }
+  if (!validName(event.competition)) {
+    reject(diagnostics, "invalid_competition");
+    return false;
+  }
+  if (!validName(event.status)) {
+    reject(diagnostics, "invalid_status");
+    return false;
+  }
+  if (!validDateLike(event.date)) {
+    reject(diagnostics, "invalid_date");
+    return false;
+  }
+  if (!validNullableScore(event.homeScore) || !validNullableScore(event.awayScore)) {
+    reject(diagnostics, "invalid_score");
+    return false;
+  }
+
+  if (MATCH_SPORTS.has(event.sport)) {
+    if (!event.home || !event.away || !validName(event.home.name) || !validName(event.away.name)) {
+      reject(diagnostics, "missing_participant");
+      return false;
+    }
+    if (event.home.name.trim().toLowerCase() === event.away.name.trim().toLowerCase()) {
+      reject(diagnostics, "duplicate_participants");
+      return false;
+    }
+  }
+
+  if (event.sport === "mma") {
+    const hasPair = Boolean(event.home && event.away && validName(event.home.name) && validName(event.away.name));
+    const hasTitle = validName(event.title);
+    if (!hasPair && !hasTitle) {
+      reject(diagnostics, "missing_fight_identity");
+      return false;
+    }
+  }
+
+  if (event.sport === "formula-1" && !validName(event.title)) {
+    reject(diagnostics, "missing_race_title");
+    return false;
+  }
+
+  accept(diagnostics);
+  return true;
+}
+
+export async function getEventsByDate(slug: string, date: string): Promise<EventValidationBatch> {
+  let normalized: UnifiedSportEvent[] = [];
+
   if (MATCH_SPORTS.has(slug)) {
     const raw = await apiArray(slug, "/games", { date, timezone: "Africa/Johannesburg" });
-    return raw.map((item) => normalizeMatch(slug, item));
-  }
-
-  if (slug === "mma") {
+    normalized = raw.map((item) => normalizeMatch(slug, item));
+  } else if (slug === "mma") {
     const raw = await apiArray(slug, "/fights", { date, timezone: "Africa/Johannesburg" });
-    return raw.map(normalizeMma);
-  }
-
-  if (slug === "formula-1") {
+    normalized = raw.map(normalizeMma);
+  } else if (slug === "formula-1") {
     const season = Number(date.slice(0, 4));
     const raw = await apiArray(slug, "/races", { season }, 21600);
-    return raw
+    normalized = raw
       .map(normalizeRace)
-      .filter((race) => !race.date || race.date.slice(0, 10) === date);
+      .filter((race) => race.date.slice(0, 10) === date);
   }
 
-  return [];
+  const diagnostics = createDiagnostics(normalized.length);
+  const events = normalized.filter((event) => validateEvent(event, diagnostics));
+  return { events, diagnostics };
 }
 
 export async function checkSportStatus(slug: string): Promise<SportApiStatus> {

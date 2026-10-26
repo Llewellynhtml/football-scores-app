@@ -26,3 +26,14 @@ export type SportApiStatus = {
   limit: number | null;
   error: string | null;
 };
+
+
+export type EventValidationBatch = {
+  events: UnifiedSportEvent[];
+  diagnostics: {
+    received: number;
+    accepted: number;
+    rejected: number;
+    reasons: Record<string, number>;
+  };
+};

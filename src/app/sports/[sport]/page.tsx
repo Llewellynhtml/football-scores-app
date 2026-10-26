@@ -6,7 +6,7 @@ import { SportDateNav } from "@/components/SportDateNav";
 import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
 import { getEventsByDate, sportHasKey } from "@/sports/generic/provider";
 import { getSport } from "@/sports/registry";
-import type { UnifiedSportEvent } from "@/sports/generic/types";
+import type { UnifiedSportEvent, EventValidationBatch } from "@/sports/generic/types";
 
 type Props = {
   params: Promise<{ sport: string }>;
@@ -32,10 +32,13 @@ export default async function SportPage({ params, searchParams }: Props) {
 
   const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
   let events: UnifiedSportEvent[] = [];
+  let diagnostics: EventValidationBatch["diagnostics"] = { received: 0, accepted: 0, rejected: 0, reasons: {} };
   let apiError = false;
 
   try {
-    events = await getEventsByDate(slug, date);
+    const batch = await getEventsByDate(slug, date);
+    events = batch.events;
+    diagnostics = batch.diagnostics;
   } catch {
     apiError = true;
   }
@@ -69,6 +72,12 @@ export default async function SportPage({ params, searchParams }: Props) {
           {apiError && (
             <div className="notice error">
               {sport.name} data could not be loaded from API-Sports right now.
+            </div>
+          )}
+
+          {diagnostics.rejected > 0 && (
+            <div className="notice validationNotice">
+              {diagnostics.rejected} malformed API record{diagnostics.rejected === 1 ? "" : "s"} were safely skipped.
             </div>
           )}
 

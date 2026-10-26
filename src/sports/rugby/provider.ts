@@ -1,5 +1,6 @@
 import { recordProviderResponse } from "@/lib/api-usage";
 import type { RugbyGame, RugbyLeague, RugbyStandingRow } from "@/sports/rugby/types";
+import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
 
 type ApiResponse<T> = {
   response?: T[];
@@ -109,7 +110,20 @@ function countryObject(country: RugbyCountry) {
   };
 }
 
-function mapGame(game: RawGame): RugbyGame {
+function mapGame(game: RawGame): RugbyGame | null {
+  if (
+    !validPositiveId(game?.id)
+    || !validDateLike(game?.date)
+    || !validPositiveId(game?.league?.id)
+    || !validName(game?.league?.name)
+    || !validPositiveId(game?.teams?.home?.id)
+    || !validPositiveId(game?.teams?.away?.id)
+    || !validName(game?.teams?.home?.name)
+    || !validName(game?.teams?.away?.name)
+    || !validNullableScore(game?.scores?.home)
+    || !validNullableScore(game?.scores?.away)
+  ) return null;
+
   return {
     id: game.id,
     date: game.date ?? "",
@@ -144,9 +158,13 @@ export function rugbyConfigured() {
   return Boolean(key());
 }
 
+function validGames(data: RawGame[]) {
+  return data.map(mapGame).filter((game): game is RugbyGame => game !== null);
+}
+
 export async function getRugbyGamesByDate(date: string) {
   const data = await apiGet<RawGame>("/games", { date, timezone: "Africa/Johannesburg" }, 900);
-  return data.map(mapGame);
+  return validGames(data);
 }
 
 export async function getRugbyGameById(id: number) {
@@ -160,7 +178,7 @@ export async function getRugbyLeagues() {
 
 export async function getRugbyLeagueGames(league: number, season?: number) {
   const data = await apiGet<RawGame>("/games", { league, season }, 1800);
-  return data.map(mapGame);
+  return validGames(data);
 }
 
 export async function getRugbyStandings(league: number, season: number): Promise<RugbyStandingRow[]> {

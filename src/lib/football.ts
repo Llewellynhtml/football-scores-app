@@ -1,6 +1,7 @@
 import { currentFootballSeason, getCompetition } from "@/config/competitions";
 import { dateInSouthAfrica, shiftDate } from "@/lib/dates";
 import { recordProviderResponse } from "@/lib/api-usage";
+import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
 
 export type Fixture = {
   id: number;
@@ -133,7 +134,21 @@ async function apiGet<T>(
   return data.response ?? [];
 }
 
-function mapFixture(item: ApiFootballFixture): Fixture {
+function mapFixture(item: ApiFootballFixture): Fixture | null {
+  if (
+    !validPositiveId(item?.fixture?.id)
+    || !validDateLike(item?.fixture?.date)
+    || !validName(item?.fixture?.status?.short)
+    || !validPositiveId(item?.league?.id)
+    || !validName(item?.league?.name)
+    || !validPositiveId(item?.teams?.home?.id)
+    || !validPositiveId(item?.teams?.away?.id)
+    || !validName(item?.teams?.home?.name)
+    || !validName(item?.teams?.away?.name)
+    || !validNullableScore(item?.goals?.home)
+    || !validNullableScore(item?.goals?.away)
+  ) return null;
+
   return {
     id: item.fixture.id,
     date: item.fixture.date,
@@ -148,13 +163,17 @@ function mapFixture(item: ApiFootballFixture): Fixture {
   };
 }
 
+function validFixtures(data: ApiFootballFixture[]) {
+  return data.map(mapFixture).filter((item): item is Fixture => item !== null);
+}
+
 export async function getFixturesByDate(date: string): Promise<Fixture[]> {
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     { date, timezone: "Africa/Johannesburg" },
     1800,
   );
-  return data.map(mapFixture);
+  return validFixtures(data);
 }
 
 export async function getFixtureById(id: number): Promise<Fixture | null> {
@@ -179,7 +198,7 @@ export async function getLeagueFixtures(slug: string): Promise<Fixture[]> {
     1800,
   );
 
-  return data.map(mapFixture);
+  return validFixtures(data);
 }
 
 export async function getStandings(slug: string): Promise<StandingRow[]> {
@@ -233,5 +252,5 @@ export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
     },
     900,
   );
-  return data.map(mapFixture);
+  return validFixtures(data);
 }
