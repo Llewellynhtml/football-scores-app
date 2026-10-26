@@ -1,6 +1,72 @@
-import Image from "next/image";
-import Link from "next/link";
+import { CompetitionFilter } from "@/components/CompetitionFilter";
+import { DateNav } from "@/components/DateNav";
+import { MatchList } from "@/components/MatchList";
+import { SiteHeader } from "@/components/SiteHeader";
+import { getCompetition } from "@/config/competitions";
+import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
 import { getFixturesByDate, type Fixture } from "@/lib/football";
-function todaySA(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Johannesburg",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}
-function timeSA(date:string){return new Intl.DateTimeFormat("en-ZA",{timeZone:"Africa/Johannesburg",hour:"2-digit",minute:"2-digit"}).format(new Date(date));}
-export default async function Home(){const today=todaySA();let fixtures:Fixture[]=[];let apiError=false;try{fixtures=await getFixturesByDate(today);}catch{apiError=true;}const grouped=fixtures.reduce<Record<string,Fixture[]>>((a,f)=>{const k=`${f.league.country} · ${f.league.name}`;(a[k]??=[]).push(f);return a;},{});return <main><header className="topbar"><div className="brand">FOOTBALL SCORES</div><nav><Link href="/">Scores</Link><Link href="/leagues">Leagues</Link><Link href="/teams">Teams</Link></nav></header><section className="hero"><p className="eyebrow">MATCH CENTRE</p><h1>Today&apos;s football, without the noise.</h1><p>Fixtures, scores and match status from one fast, mobile-first dashboard.</p></section><section className="content"><div className="sectionHeading"><div><p className="eyebrow">TODAY</p><h2>{today}</h2></div><span className="badge">{fixtures.length} fixtures</span></div>{!process.env.API_FOOTBALL_KEY&&<div className="notice">API integration is ready. Add <code>API_FOOTBALL_KEY</code> in Hostinger environment variables to load data.</div>}{apiError&&<div className="notice error">Football data could not be loaded right now.</div>}{Object.keys(grouped).length===0?<div className="emptyState"><h3>No fixture data loaded yet</h3><p>Once the API key is configured, today&apos;s fixtures will appear here automatically.</p></div>:<div className="leagueList">{Object.entries(grouped).map(([league,matches])=><section className="leagueCard" key={league}><div className="leagueTitle"><Image src={matches[0].league.logo} alt="" width={28} height={28}/><h3>{league}</h3></div>{matches.map(match=><article className="matchRow" key={match.id}><div className="matchMeta"><span>{match.status==="NS"?timeSA(match.date):match.status}</span>{match.elapsed?<span>{match.elapsed}&apos;</span>:null}</div><div className="team"><Image src={match.home.logo} alt="" width={26} height={26}/><span>{match.home.name}</span></div><div className="score"><strong>{match.home.goals??"-"}</strong><span>:</span><strong>{match.away.goals??"-"}</strong></div><div className="team away"><span>{match.away.name}</span><Image src={match.away.logo} alt="" width={26} height={26}/></div></article>)}</section>)}</div>}</section></main>}
+
+type PageProps = {
+  searchParams: Promise<{ date?: string; league?: string }>;
+};
+
+export default async function Home({ searchParams }: PageProps) {
+  const query = await searchParams;
+  const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
+  const selectedCompetition = query.league ? getCompetition(query.league) : undefined;
+
+  let fixtures: Fixture[] = [];
+  let apiError = false;
+
+  try {
+    fixtures = await getFixturesByDate(date);
+  } catch {
+    apiError = true;
+  }
+
+  if (selectedCompetition) {
+    fixtures = fixtures.filter((fixture) => fixture.league.id === selectedCompetition.id);
+  }
+
+  return (
+    <main>
+      <SiteHeader />
+
+      <section className="hero">
+        <p className="eyebrow">MATCH CENTRE</p>
+        <h1>Football scores built for speed.</h1>
+        <p>
+          Browse fixtures and results by date, then drill into leagues, standings,
+          teams and individual matches.
+        </p>
+      </section>
+
+      <section className="content">
+        <DateNav date={date} league={selectedCompetition?.slug} />
+        <CompetitionFilter date={date} selected={selectedCompetition?.slug} />
+
+        <div className="sectionHeading">
+          <div>
+            <p className="eyebrow">{selectedCompetition?.name ?? "ALL COMPETITIONS"}</p>
+            <h2>{prettyDate(date)}</h2>
+          </div>
+          <span className="badge">{fixtures.length} fixtures</span>
+        </div>
+
+        {!process.env.API_FOOTBALL_KEY && (
+          <div className="notice">
+            API integration is ready. Add <code>API_FOOTBALL_KEY</code> in Hostinger environment variables to load football data.
+          </div>
+        )}
+
+        {apiError && (
+          <div className="notice error">
+            Football data could not be loaded right now. The application itself is still online.
+          </div>
+        )}
+
+        <MatchList fixtures={fixtures} />
+      </section>
+    </main>
+  );
+}
