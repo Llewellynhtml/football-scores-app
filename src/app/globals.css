@@ -1353,3 +1353,71 @@ button, input, select { font: inherit; }
     justify-content: flex-start;
   }
 }
+
+
+.teamSearchForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 24px 0 18px;
+}
+.teamSearchForm label { display: flex; flex-direction: column; gap: 6px; }
+.teamSearchForm label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.teamSearchForm input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+.teamSearchForm input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(21,148,71,.09);
+}
+.teamSearchForm button {
+  align-self: end;
+  min-height: 44px;
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  padding: 0 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.teamSearchResults {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+.teamSearchCard {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.teamSearchCard > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.teamSearchCard strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.teamSearchCard span { color: var(--muted); font-size: 10px; }
+@media (max-width: 720px) {
+  .teamSearchForm { grid-template-columns: 1fr; }
+  .teamSearchResults { grid-template-columns: 1fr; }
+}

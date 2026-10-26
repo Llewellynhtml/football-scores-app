@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
-const siteUrl = process.env.SITE_URL ?? "https://palegoldenrod-clam-775783.hostingersite.com";
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
     default: "Live Sports",
     template: "%s",
   },
-  description: "Live scores, fixtures, results and schedules across football, rugby, basketball, NBA, NFL, Formula 1, baseball, hockey, MMA, volleyball, handball and AFL.",
+  description: "Live scores, fixtures, results and schedules across supported sports.",
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",

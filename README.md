@@ -1,99 +1,43 @@
 # Live Sports App
 
-A private Next.js + TypeScript multi-sport scores platform deployed on Hostinger. Football is the first active sport module; the architecture now registers the additional API-Sports products visible in the user's dashboard without consuming their quotas until each provider is explicitly implemented.
+A private Next.js + TypeScript multi-sport scores platform deployed on Hostinger.
 
-## Live architecture
+## API-driven sports data
 
-```
-Next.js platform
-├── shared sports registry
-├── shared navigation / SEO shell
-├── Football provider (LIVE)
-├── Basketball (registered)
-├── NBA (registered)
-├── American Football / NFL (registered)
-├── Rugby provider (IMPLEMENTED; activates when API_RUGBY_KEY is configured)
-├── Formula 1 (registered)
-├── Baseball (registered)
-├── Hockey (registered)
-├── MMA (registered)
-├── Volleyball (registered)
-├── Handball (registered)
-└── AFL (registered)
-```
+Football does not maintain local lists of leagues, league IDs, countries, seasons, teams, team IDs or logos.
 
-"Registered" means the sport has a route, environment-variable contract and provider slot. It does not make API calls yet.
+API-Football is the source of truth for:
 
-## Current football product
+- current leagues and cups
+- competition IDs, names, countries and logos
+- current season and coverage flags
+- fixtures, results and match status
+- standings
+- teams and team profiles
 
-- Yesterday / Today / Tomorrow navigation
-- Competition filters
-- EPL, Champions League, La Liga and South African PSL
-- Match detail pages
-- League fixtures
-- Standings
-- Team pages
-- SEO-friendly slugs
-- Cached API-Football requests
-- API usage diagnostics
-- Protected Hostinger cron cache warming
+The football homepage derives competition filters from the fixtures returned for the selected date. The league directory is generated from the API-Football current competition catalogue and cached server-side.
 
-## Multi-sport routes
+## Application configuration
 
-- `/sports` — all registered sports
-- `/sports/basketball`
-- `/sports/nba`
-- `/sports/american-football`
-- `/sports/rugby`
-- `/sports/formula-1`
-- `/sports/baseball`
-- `/sports/hockey`
-- `/sports/mma`
-- `/sports/volleyball`
-- `/sports/handball`
-- `/sports/afl`
-- `/api/sports` — safe configuration/status view
+Provider URLs, environment-variable names, route patterns, cache durations, status mappings, UI labels and timezone settings are application configuration. They are not sports-result or competition data.
 
-Football remains live at `/` and `/football` redirects there so existing URLs do not break.
+## Main routes
 
-## Rugby module
-
-Rugby now has a real server-side provider and UI routes:
-
-- `/sports/rugby` — date-based rugby scores and fixtures
-- `/sports/rugby/leagues` — competition catalogue
-- `/sports/rugby/leagues/[id]` — competition games
-- `/sports/rugby/games/[id]` — individual game page
-- `/api/rugby/health` — configuration health check
-
-The module makes **zero Rugby API calls** until `API_RUGBY_KEY` is added in Hostinger.
-
-## Football routes
-
-- `/`
-- `/leagues/premier-league`
-- `/standings/premier-league`
-- `/teams/mamelodi-sundowns`
-- `/matches/arsenal-vs-chelsea-12345`
-- `/api/health`
-- `/api/usage`
+- `/` — football scores for the selected date
+- `/leagues` — API-driven football league/cup catalogue
+- `/leagues/[league]` — API-driven competition fixtures
+- `/standings/[league]` — API-driven standings when covered
+- `/teams` — API-Football team search
+- `/teams/[slug]` — API-resolved team profile
+- `/matches/[slug]` — match detail
+- `/sports` — supported sport modules
+- `/api/usage` — API usage diagnostics
 
 ## Environment variables
 
-The live deployment currently requires:
+Copy `.env.example` and configure deployment values in Hostinger. Do not commit real API keys or cron secrets.
 
-```
-API_FOOTBALL_KEY=your_real_key
-API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
-FOOTBALL_SEASON=2026
-CRON_SECRET=a_long_random_secret
-SITE_URL=https://palegoldenrod-clam-775783.hostingersite.com
-CRON_MODE=fixtures
-```
-
-The repository's `.env.example` contains reserved variables for the other sports. Do not add those API keys to Hostinger until we actually implement and test the corresponding provider, otherwise it becomes difficult to distinguish "configured" from "production ready."
-
-Never commit real API keys or cron secrets.
+`SITE_URL` should be set to the production origin. Football season is not fixed locally; league season data comes from API-Football.
 
 ## Hostinger
 
@@ -104,4 +48,4 @@ Never commit real API keys or cron secrets.
 
 ## Quota strategy
 
-Only Football consumes API-Sports quota today. Additional sports are navigation/architecture placeholders and make zero provider calls. Each new sport should receive its own cache policy, cron budget and usage tracking before activation.
+API responses are cached server-side. Catalogue and metadata use longer cache durations than score feeds. Expensive league data is fetched on demand instead of preloading every competition.
