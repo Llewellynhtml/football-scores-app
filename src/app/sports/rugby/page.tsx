@@ -42,7 +42,7 @@ export default async function RugbyPage() {
             <p className="eyebrow">MATCH DAY</p>
             <h2>{prettyDate(date)}</h2>
           </div>
-          <span className="badge">{games.length} games</span>
+          <span className="badge">{apiError ? "—" : games.length} games</span>
         </div>
 
         {!rugbyConfigured() && (
@@ -51,13 +51,13 @@ export default async function RugbyPage() {
           </div>
         )}
 
-        {apiError && (
+        {apiError ? (
           <div className="notice error">
-            Rugby data could not be loaded right now. The rest of the platform is still available.
+            API-Sports could not return Rugby data right now. This is usually caused by a temporary rate limit, daily quota, or provider availability issue.
           </div>
+        ) : (
+          <RugbyGameList games={games} />
         )}
-
-        <RugbyGameList games={games} />
       </section>
     </main>
   );
