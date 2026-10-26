@@ -2,6 +2,7 @@ import { currentFootballSeason, getCompetition } from "@/config/competitions";
 import { dateInSouthAfrica, shiftDate } from "@/lib/dates";
 import { recordProviderResponse } from "@/lib/api-usage";
 import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
+import { slugify } from "@/lib/slug";
 
 export type Fixture = {
   id: number;
@@ -82,6 +83,10 @@ export type LeagueMetadata = {
     current: boolean;
     coverage: LeagueCoverage;
   };
+};
+
+export type LeagueCatalogItem = LeagueMetadata & {
+  routeKey: string;
 };
 
 export type LeagueDataSnapshot = {
@@ -257,33 +262,8 @@ function mapTeam(item: ApiTeam): TeamProfile | null {
   return { ...item.team, venue: item.venue ?? null };
 }
 
-export async function getFixturesByDate(date: string): Promise<Fixture[]> {
-  const data = await apiGet<ApiFootballFixture>(
-    "/fixtures",
-    { date, timezone: "Africa/Johannesburg" },
-    1800,
-  );
-  return validFixtures(data);
-}
-
-export async function getFixtureById(id: number): Promise<Fixture | null> {
-  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, 900);
-  return data[0] ? mapFixture(data[0]) : null;
-}
-
-export async function getLeagueMetadata(slug: string): Promise<LeagueMetadata | null> {
-  const competition = getCompetition(slug);
-  if (!competition) return null;
-
-  const season = currentFootballSeason();
-  const data = await apiGet<ApiLeagueEnvelope>(
-    "/leagues",
-    { id: competition.id, season },
-    86400,
-  );
-
-  const item = data[0];
-  if (!item || !validPositiveId(item.league?.id) || !validName(item.league?.name)) return null;
+function mapLeague(item: ApiLeagueEnvelope, season: number): LeagueCatalogItem | null {
+  if (!validPositiveId(item?.league?.id) || !validName(item?.league?.name)) return null;
 
   const seasonInfo = item.seasons?.find((entry) => entry.year === season)
     ?? item.seasons?.find((entry) => entry.current)
@@ -298,51 +278,132 @@ export async function getLeagueMetadata(slug: string): Promise<LeagueMetadata | 
     logo: item.league.logo,
     country: item.country,
     season: seasonInfo,
+    routeKey: `${slugify(item.league.name)}-${item.league.id}`,
   };
 }
 
-export async function getLeagueTeams(slug: string): Promise<TeamProfile[]> {
+function fallbackFeaturedLeague(slug: string): LeagueCatalogItem | null {
   const competition = getCompetition(slug);
-  if (!competition) return [];
+  if (!competition) return null;
 
-  const data = await apiGet<ApiTeam>(
-    "/teams",
-    { league: competition.id, season: currentFootballSeason() },
+  const season = currentFootballSeason();
+  return {
+    id: competition.id,
+    name: competition.name,
+    type: "League",
+    logo: `https://media.api-sports.io/football/leagues/${competition.id}.png`,
+    country: { name: competition.country, code: null, flag: null },
+    season: {
+      year: season,
+      start: null,
+      end: null,
+      current: true,
+      coverage: {
+        fixtures: {
+          events: false,
+          lineups: false,
+          statistics_fixtures: false,
+          statistics_players: false,
+        },
+        standings: true,
+        players: false,
+        top_scorers: false,
+        top_assists: false,
+        top_cards: false,
+        injuries: false,
+        predictions: false,
+        odds: false,
+      },
+    },
+    routeKey: slug,
+  };
+}
+
+export async function getFixturesByDate(date: string): Promise<Fixture[]> {
+  const data = await apiGet<ApiFootballFixture>(
+    "/fixtures",
+    { date, timezone: "Africa/Johannesburg" },
+    1800,
+  );
+  return validFixtures(data);
+}
+
+export async function getFixtureById(id: number): Promise<Fixture | null> {
+  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, 900);
+  return data[0] ? mapFixture(data[0]) : null;
+}
+
+export async function getFootballLeagueCatalog(): Promise<LeagueCatalogItem[]> {
+  const season = currentFootballSeason();
+  const data = await apiGet<ApiLeagueEnvelope>(
+    "/leagues",
+    { season },
     86400,
   );
 
+  return data
+    .map((item) => mapLeague(item, season))
+    .filter((item): item is LeagueCatalogItem => item !== null)
+    .sort((a, b) => {
+      const country = a.country.name.localeCompare(b.country.name);
+      return country !== 0 ? country : a.name.localeCompare(b.name);
+    });
+}
+
+export async function resolveLeague(routeKey: string): Promise<LeagueCatalogItem | null> {
+  const featured = getCompetition(routeKey);
+  const catalog = await getFootballLeagueCatalog();
+
+  if (featured) {
+    return catalog.find((item) => item.id === featured.id)
+      ? { ...catalog.find((item) => item.id === featured.id)!, routeKey }
+      : fallbackFeaturedLeague(routeKey);
+  }
+
+  const match = routeKey.match(/-(\d+)$/);
+  const id = match ? Number(match[1]) : null;
+  if (!id) return null;
+
+  return catalog.find((item) => item.id === id) ?? null;
+}
+
+export async function getLeagueMetadata(routeKey: string): Promise<LeagueMetadata | null> {
+  return resolveLeague(routeKey);
+}
+
+async function getLeagueTeamsFor(ref: LeagueCatalogItem): Promise<TeamProfile[]> {
+  const data = await apiGet<ApiTeam>(
+    "/teams",
+    { league: ref.id, season: ref.season.year },
+    86400,
+  );
   return data.map(mapTeam).filter((team): team is TeamProfile => team !== null);
 }
 
-export async function getLeagueFixtures(slug: string): Promise<Fixture[]> {
-  const competition = getCompetition(slug);
-  if (!competition) return [];
-
+async function getLeagueFixturesFor(ref: LeagueCatalogItem): Promise<Fixture[]> {
   const today = dateInSouthAfrica();
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     {
-      league: competition.id,
-      season: currentFootballSeason(),
+      league: ref.id,
+      season: ref.season.year,
       from: shiftDate(today, -14),
       to: shiftDate(today, 30),
       timezone: "Africa/Johannesburg",
     },
     43200,
   );
-
   return validFixtures(data);
 }
 
-export async function getStandings(slug: string): Promise<StandingRow[]> {
-  const competition = getCompetition(slug);
-  if (!competition) return [];
+async function getStandingsFor(ref: LeagueCatalogItem): Promise<StandingRow[]> {
+  if (!ref.season.coverage.standings) return [];
 
   const data = await apiGet<{
     league: { standings: ApiStanding[][] };
   }>(
     "/standings",
-    { league: competition.id, season: currentFootballSeason() },
+    { league: ref.id, season: ref.season.year },
     43200,
   );
 
@@ -364,22 +425,36 @@ export async function getStandings(slug: string): Promise<StandingRow[]> {
     }));
 }
 
-export async function getLeagueSnapshot(slug: string): Promise<LeagueDataSnapshot | null> {
-  const competition = getCompetition(slug);
-  if (!competition) return null;
+export async function getLeagueTeams(routeKey: string): Promise<TeamProfile[]> {
+  const ref = await resolveLeague(routeKey);
+  return ref ? getLeagueTeamsFor(ref) : [];
+}
 
-  const [metadata, teams, standings, fixtures] = await Promise.all([
-    getLeagueMetadata(slug),
-    getLeagueTeams(slug),
-    getStandings(slug),
-    getLeagueFixtures(slug),
+export async function getLeagueFixtures(routeKey: string): Promise<Fixture[]> {
+  const ref = await resolveLeague(routeKey);
+  return ref ? getLeagueFixturesFor(ref) : [];
+}
+
+export async function getStandings(routeKey: string): Promise<StandingRow[]> {
+  const ref = await resolveLeague(routeKey);
+  return ref ? getStandingsFor(ref) : [];
+}
+
+export async function getLeagueSnapshot(routeKey: string): Promise<LeagueDataSnapshot | null> {
+  const ref = await resolveLeague(routeKey);
+  if (!ref) return null;
+
+  const [teams, standings, fixtures] = await Promise.all([
+    getLeagueTeamsFor(ref),
+    getStandingsFor(ref),
+    getLeagueFixturesFor(ref),
   ]);
 
   return {
-    slug,
-    season: currentFootballSeason(),
+    slug: routeKey,
+    season: ref.season.year,
     generatedAt: new Date().toISOString(),
-    metadata,
+    metadata: ref,
     teams,
     standings,
     fixtures,

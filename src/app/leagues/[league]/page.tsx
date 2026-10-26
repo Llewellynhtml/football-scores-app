@@ -5,24 +5,22 @@ import { MatchList } from "@/components/MatchList";
 import { SafeLogo } from "@/components/SafeLogo";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getCompetition } from "@/config/competitions";
-import { getLeagueSnapshot } from "@/lib/football";
+import { getLeagueFixtures, getLeagueSnapshot, resolveLeague } from "@/lib/football";
 
 type Props = { params: Promise<{ league: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { league } = await params;
-  const competition = getCompetition(league);
+  const competition = await resolveLeague(league);
   if (!competition) return { title: "League not found" };
+
   return {
-    title: `${competition.name} Fixtures, Teams & Standings | Live Sports`,
-    description: `${competition.name} fixtures, teams, standings and API-Football coverage for the current season.`,
+    title: `${competition.name} Fixtures & Results | Live Sports`,
+    description: `${competition.name} fixtures and results for the current season.`,
   };
 }
 
-function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof getLeagueSnapshot>>>["metadata"] extends infer M
-  ? M extends { season: { coverage: infer C } } ? C : never
-  : never) {
-  if (!coverage) return [];
+function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof resolveLeague>>>["season"]["coverage"]) {
   return [
     ["Events", coverage.fixtures.events],
     ["Lineups", coverage.fixtures.lineups],
@@ -38,8 +36,57 @@ function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof getLeague
 
 export default async function LeaguePage({ params }: Props) {
   const { league } = await params;
-  const competition = getCompetition(league);
+  const competition = await resolveLeague(league);
   if (!competition) notFound();
+
+  const featured = Boolean(getCompetition(league));
+
+  if (!featured) {
+    const fixtures = await getLeagueFixtures(league);
+
+    return (
+      <main>
+        <SiteHeader />
+        <section className="content pageTop">
+          <div className="leagueHero">
+            <SafeLogo src={competition.logo} alt={competition.name} fallbackText={competition.name} size={64} />
+            <div>
+              <p className="eyebrow">{competition.country.name} · {competition.type}</p>
+              <h1 className="pageTitle">{competition.name}</h1>
+              <p className="muted">
+                Season {competition.season.year}. This non-featured competition loads fixtures on demand
+                so browsing the full catalogue does not consume extra API requests.
+              </p>
+            </div>
+          </div>
+
+          <div className="coverageGrid leagueCoverageCompact">
+            {coverageItems(competition.season.coverage).map(([label, available]) => (
+              <span className={available ? "coverageChip available" : "coverageChip"} key={label}>
+                <span aria-hidden="true">{available ? "✓" : "–"}</span>
+                {label}
+              </span>
+            ))}
+          </div>
+
+          <div className="sectionHeading">
+            <div>
+              <p className="eyebrow">FIXTURES</p>
+              <h2>Recent & upcoming</h2>
+            </div>
+            <div className="cardActions leaguePageActions">
+              {competition.season.coverage.standings ? (
+                <Link href={`/standings/${league}`}>Standings</Link>
+              ) : null}
+              <Link href="/leagues">All leagues</Link>
+            </div>
+          </div>
+
+          <MatchList fixtures={fixtures} />
+        </section>
+      </main>
+    );
+  }
 
   const snapshot = await getLeagueSnapshot(league);
   if (!snapshot) notFound();
@@ -54,11 +101,11 @@ export default async function LeaguePage({ params }: Props) {
           <SafeLogo
             src={snapshot.metadata?.logo}
             alt={competition.name}
-            fallbackText={competition.shortName}
+            fallbackText={competition.name}
             size={64}
           />
           <div>
-            <p className="eyebrow">{competition.country}</p>
+            <p className="eyebrow">{competition.country.name}</p>
             <h1 className="pageTitle">{competition.name}</h1>
             <p className="muted">
               Season {snapshot.season}. League metadata and team lists are cached daily;
@@ -104,7 +151,12 @@ export default async function LeaguePage({ params }: Props) {
 
           <div className="leagueTeamsGrid">
             {snapshot.teams.map((team) => (
-              <Link className="leagueTeamCard" href={`/teams/${team.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`} key={team.id} prefetch={false}>
+              <Link
+                className="leagueTeamCard"
+                href={`/teams/${team.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+                key={team.id}
+                prefetch={false}
+              >
                 <SafeLogo src={team.logo} alt={team.name} fallbackText={team.name} size={34} />
                 <span>{team.name}</span>
               </Link>
@@ -118,7 +170,7 @@ export default async function LeaguePage({ params }: Props) {
               <p className="eyebrow">TABLE</p>
               <h2>Top standings</h2>
             </div>
-            <Link className="button" href={`/standings/${competition.slug}`}>Full standings</Link>
+            <Link className="button" href={`/standings/${league}`}>Full standings</Link>
           </div>
 
           <div className="miniStandings">

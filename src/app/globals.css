@@ -1222,3 +1222,134 @@ button, input, select { font: inherit; }
     grid-template-columns: 1fr;
   }
 }
+
+
+.allLeaguesSection {
+  margin-top: 46px;
+}
+
+.allLeaguesNotice {
+  margin-top: 30px;
+}
+
+.leagueCatalogFilters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 220px 170px;
+  gap: 10px;
+  margin: 16px 0 14px;
+}
+
+.leagueCatalogFilters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leagueCatalogFilters label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.leagueCatalogFilters input,
+.leagueCatalogFilters select {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+
+.leagueCatalogFilters input:focus,
+.leagueCatalogFilters select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(21,148,71,.09);
+}
+
+.leagueCatalogList {
+  display: grid;
+  gap: 7px;
+}
+
+.leagueCatalogRow {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  content-visibility: auto;
+  contain-intrinsic-size: 62px;
+}
+
+.leagueCatalogRow:hover {
+  border-color: #cad5de;
+  background: #fbfcfd;
+}
+
+.leagueCatalogIdentity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.leagueCatalogIdentity > span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.leagueCatalogIdentity > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.leagueCatalogActions {
+  display: flex;
+  gap: 7px;
+}
+
+.leagueCatalogActions a {
+  padding: 7px 9px;
+  border: 1px solid #b8dfc6;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.leagueCoverageCompact {
+  margin: 22px 0 26px;
+}
+
+.leaguePageActions {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .leagueCatalogFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .leagueCatalogRow {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .leagueCatalogActions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
