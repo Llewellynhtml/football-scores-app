@@ -1,5 +1,17 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { SportsNav } from "@/components/SportsNav";
+
+function SportsNavFallback() {
+  return (
+    <div className="sportsNavWrap">
+      <nav className="sportsNav" aria-label="Sports">
+        <span className="sportTab liveSport">⚽ Football</span>
+        <span className="sportTab">Loading sports…</span>
+      </nav>
+    </div>
+  );
+}
 
 export function SiteHeader() {
   return (
@@ -13,7 +25,10 @@ export function SiteHeader() {
           <Link href="/sports">Sports</Link>
         </nav>
       </header>
-      <SportsNav />
+
+      <Suspense fallback={<SportsNavFallback />}>
+        <SportsNav />
+      </Suspense>
     </>
   );
 }
