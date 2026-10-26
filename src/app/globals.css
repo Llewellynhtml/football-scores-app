@@ -1076,3 +1076,149 @@ button, input, select { font: inherit; }
     min-width: 0;
   }
 }
+
+
+.leagueHero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.leagueSnapshotStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 24px 0 30px;
+}
+
+.leagueSnapshotStats > div {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leagueSnapshotStats strong {
+  font-size: 21px;
+}
+
+.leagueSnapshotStats span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.leagueDataSection {
+  margin-top: 30px;
+}
+
+.coverageGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coverageChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.coverageChip.available {
+  border-color: #b8dfc6;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.leagueTeamsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.leagueTeamCard {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.leagueTeamCard span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leagueTeamCard:hover {
+  border-color: #b8dfc6;
+  background: var(--accent-soft);
+}
+
+.miniStandings {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.miniStandingRow {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 30px 28px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.miniStandingRow:last-child {
+  border-bottom: 0;
+}
+
+.miniStandingRow > strong {
+  color: var(--muted);
+  text-align: center;
+}
+
+.miniStandingRow > b {
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .leagueTeamsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leagueSnapshotStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .leagueHero {
+    align-items: flex-start;
+  }
+
+  .leagueTeamsGrid {
+    grid-template-columns: 1fr;
+  }
+}

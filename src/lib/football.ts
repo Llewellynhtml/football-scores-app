@@ -48,6 +48,52 @@ export type TeamProfile = {
   } | null;
 };
 
+export type LeagueCoverage = {
+  fixtures: {
+    events: boolean;
+    lineups: boolean;
+    statistics_fixtures: boolean;
+    statistics_players: boolean;
+  };
+  standings: boolean;
+  players: boolean;
+  top_scorers: boolean;
+  top_assists: boolean;
+  top_cards: boolean;
+  injuries: boolean;
+  predictions: boolean;
+  odds: boolean;
+};
+
+export type LeagueMetadata = {
+  id: number;
+  name: string;
+  type: string;
+  logo: string;
+  country: {
+    name: string;
+    code: string | null;
+    flag: string | null;
+  };
+  season: {
+    year: number;
+    start: string | null;
+    end: string | null;
+    current: boolean;
+    coverage: LeagueCoverage;
+  };
+};
+
+export type LeagueDataSnapshot = {
+  slug: string;
+  season: number;
+  generatedAt: string;
+  metadata: LeagueMetadata | null;
+  teams: TeamProfile[];
+  standings: StandingRow[];
+  fixtures: Fixture[];
+};
+
 type ApiFootballFixture = {
   fixture: {
     id: number;
@@ -99,12 +145,43 @@ type ApiTeam = {
   } | null;
 };
 
+type ApiLeagueEnvelope = {
+  league: {
+    id: number;
+    name: string;
+    type: string;
+    logo: string;
+  };
+  country: {
+    name: string;
+    code: string | null;
+    flag: string | null;
+  };
+  seasons: Array<{
+    year: number;
+    start: string | null;
+    end: string | null;
+    current: boolean;
+    coverage: LeagueCoverage;
+  }>;
+};
+
 type ApiResponse<T> = {
-  response: T[];
+  response?: T[];
   errors?: unknown;
+  results?: number;
+  paging?: { current?: number; total?: number };
 };
 
 const BASE_URL = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
+
+function hasApiErrors(errors: unknown) {
+  if (!errors) return false;
+  if (Array.isArray(errors)) return errors.length > 0;
+  if (typeof errors === "object") return Object.keys(errors as Record<string, unknown>).length > 0;
+  if (typeof errors === "string") return errors.trim().length > 0;
+  return false;
+}
 
 async function apiGet<T>(
   pathname: string,
@@ -131,7 +208,15 @@ async function apiGet<T>(
   }
 
   const data = (await response.json()) as ApiResponse<T>;
-  return data.response ?? [];
+  if (hasApiErrors(data.errors)) {
+    throw new Error(`API-Football returned an error for ${pathname}`);
+  }
+
+  if (typeof data.results === "number" && data.results === 0) {
+    return [];
+  }
+
+  return Array.isArray(data.response) ? data.response : [];
 }
 
 function mapFixture(item: ApiFootballFixture): Fixture | null {
@@ -167,6 +252,11 @@ function validFixtures(data: ApiFootballFixture[]) {
   return data.map(mapFixture).filter((item): item is Fixture => item !== null);
 }
 
+function mapTeam(item: ApiTeam): TeamProfile | null {
+  if (!validPositiveId(item?.team?.id) || !validName(item?.team?.name)) return null;
+  return { ...item.team, venue: item.venue ?? null };
+}
+
 export async function getFixturesByDate(date: string): Promise<Fixture[]> {
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
@@ -181,6 +271,49 @@ export async function getFixtureById(id: number): Promise<Fixture | null> {
   return data[0] ? mapFixture(data[0]) : null;
 }
 
+export async function getLeagueMetadata(slug: string): Promise<LeagueMetadata | null> {
+  const competition = getCompetition(slug);
+  if (!competition) return null;
+
+  const season = currentFootballSeason();
+  const data = await apiGet<ApiLeagueEnvelope>(
+    "/leagues",
+    { id: competition.id, season },
+    86400,
+  );
+
+  const item = data[0];
+  if (!item || !validPositiveId(item.league?.id) || !validName(item.league?.name)) return null;
+
+  const seasonInfo = item.seasons?.find((entry) => entry.year === season)
+    ?? item.seasons?.find((entry) => entry.current)
+    ?? item.seasons?.[0];
+
+  if (!seasonInfo) return null;
+
+  return {
+    id: item.league.id,
+    name: item.league.name,
+    type: item.league.type,
+    logo: item.league.logo,
+    country: item.country,
+    season: seasonInfo,
+  };
+}
+
+export async function getLeagueTeams(slug: string): Promise<TeamProfile[]> {
+  const competition = getCompetition(slug);
+  if (!competition) return [];
+
+  const data = await apiGet<ApiTeam>(
+    "/teams",
+    { league: competition.id, season: currentFootballSeason() },
+    86400,
+  );
+
+  return data.map(mapTeam).filter((team): team is TeamProfile => team !== null);
+}
+
 export async function getLeagueFixtures(slug: string): Promise<Fixture[]> {
   const competition = getCompetition(slug);
   if (!competition) return [];
@@ -191,11 +324,11 @@ export async function getLeagueFixtures(slug: string): Promise<Fixture[]> {
     {
       league: competition.id,
       season: currentFootballSeason(),
-      from: shiftDate(today, -7),
-      to: shiftDate(today, 14),
+      from: shiftDate(today, -14),
+      to: shiftDate(today, 30),
       timezone: "Africa/Johannesburg",
     },
-    1800,
+    43200,
   );
 
   return validFixtures(data);
@@ -210,35 +343,54 @@ export async function getStandings(slug: string): Promise<StandingRow[]> {
   }>(
     "/standings",
     { league: competition.id, season: currentFootballSeason() },
-    21600,
+    43200,
   );
 
   const table = data[0]?.league.standings?.[0] ?? [];
-  return table.map((row) => ({
-    rank: row.rank,
-    team: row.team,
-    points: row.points,
-    goalsDiff: row.goalsDiff,
-    form: row.form,
-    played: row.all.played,
-    win: row.all.win,
-    draw: row.all.draw,
-    lose: row.all.lose,
-    goalsFor: row.all.goals.for,
-    goalsAgainst: row.all.goals.against,
-  }));
+  return table
+    .filter((row) => validPositiveId(row?.team?.id) && validName(row?.team?.name))
+    .map((row) => ({
+      rank: row.rank,
+      team: row.team,
+      points: row.points,
+      goalsDiff: row.goalsDiff,
+      form: row.form,
+      played: row.all.played,
+      win: row.all.win,
+      draw: row.all.draw,
+      lose: row.all.lose,
+      goalsFor: row.all.goals.for,
+      goalsAgainst: row.all.goals.against,
+    }));
+}
+
+export async function getLeagueSnapshot(slug: string): Promise<LeagueDataSnapshot | null> {
+  const competition = getCompetition(slug);
+  if (!competition) return null;
+
+  const [metadata, teams, standings, fixtures] = await Promise.all([
+    getLeagueMetadata(slug),
+    getLeagueTeams(slug),
+    getStandings(slug),
+    getLeagueFixtures(slug),
+  ]);
+
+  return {
+    slug,
+    season: currentFootballSeason(),
+    generatedAt: new Date().toISOString(),
+    metadata,
+    teams,
+    standings,
+    fixtures,
+  };
 }
 
 export async function getTeamBySlug(slug: string): Promise<TeamProfile | null> {
   const search = slug.replace(/-/g, " ");
   const data = await apiGet<ApiTeam>("/teams", { search }, 43200);
   const item = data[0];
-  if (!item) return null;
-
-  return {
-    ...item.team,
-    venue: item.venue,
-  };
+  return item ? mapTeam(item) : null;
 }
 
 export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
@@ -250,7 +402,7 @@ export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
       next: 8,
       timezone: "Africa/Johannesburg",
     },
-    900,
+    1800,
   );
   return validFixtures(data);
 }
