@@ -39,14 +39,14 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
           <section className="leagueCard" key={league}>
             <div className="leagueTitle">
               <div className="leagueIdentity">
-                <Image src={matches[0].league.logo} alt="" width={24} height={24} />
+                <Image src={matches[0].league.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
                 <div>
                   <small>{matches[0].league.country}</small>
                   <h3>{matches[0].league.name}</h3>
                 </div>
               </div>
               {featured ? (
-                <Link className="leagueAction" href={`/standings/${featured.slug}`}>Standings</Link>
+                <Link className="leagueAction" href={`/standings/${featured.slug}`} prefetch={false}>Standings</Link>
               ) : (
                 <span className="leagueCount">{matches.length}</span>
               )}
@@ -61,20 +61,20 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
                     <span>{displayStatus(match)}</span>
                   </div>
 
-                  <Link className="team" href={teamUrl(match.home.name)}>
-                    <Image src={match.home.logo} alt="" width={24} height={24} />
+                  <Link className="team" href={teamUrl(match.home.name)} prefetch={false}>
+                    <Image src={match.home.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
                     <span>{match.home.name}</span>
                   </Link>
 
-                  <Link className="score" href={matchUrl(match.home.name, match.away.name, match.id)}>
+                  <Link className="score" href={matchUrl(match.home.name, match.away.name, match.id)} prefetch={false}>
                     <strong>{match.home.goals ?? "-"}</strong>
                     <span>:</span>
                     <strong>{match.away.goals ?? "-"}</strong>
                   </Link>
 
-                  <Link className="team away" href={teamUrl(match.away.name)}>
+                  <Link className="team away" href={teamUrl(match.away.name)} prefetch={false}>
                     <span>{match.away.name}</span>
-                    <Image src={match.away.logo} alt="" width={24} height={24} />
+                    <Image src={match.away.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
                   </Link>
                 </article>
               );

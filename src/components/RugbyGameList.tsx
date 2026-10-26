@@ -35,7 +35,7 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
         <section className="leagueCard" key={label}>
           <div className="leagueTitle">
             {leagueGames[0].league.logo ? (
-              <Image src={leagueGames[0].league.logo} alt="" width={28} height={28} />
+              <Image src={leagueGames[0].league.logo} alt="" width={28} height={28} sizes="28px" quality={50} loading="lazy" />
             ) : (
               <span aria-hidden="true">🏉</span>
             )}
@@ -47,11 +47,11 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
               <div className="matchMeta"><span>{displayStatus(game)}</span></div>
 
               <div className="team">
-                {game.home.logo ? <Image src={game.home.logo} alt="" width={26} height={26} /> : null}
+                {game.home.logo ? <Image src={game.home.logo} alt="" width={26} height={26} sizes="26px" quality={50} loading="lazy" /> : null}
                 <span>{game.home.name}</span>
               </div>
 
-              <Link className="score" href={`/sports/rugby/games/${game.id}`}>
+              <Link className="score" href={`/sports/rugby/games/${game.id}`} prefetch={false}>
                 <strong>{score(game.home.score)}</strong>
                 <span>:</span>
                 <strong>{score(game.away.score)}</strong>
@@ -59,7 +59,7 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
 
               <div className="team away">
                 <span>{game.away.name}</span>
-                {game.away.logo ? <Image src={game.away.logo} alt="" width={26} height={26} /> : null}
+                {game.away.logo ? <Image src={game.away.logo} alt="" width={26} height={26} sizes="26px" quality={50} loading="lazy" /> : null}
               </div>
             </article>
           ))}

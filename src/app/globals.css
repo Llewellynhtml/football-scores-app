@@ -1,12 +1,12 @@
 :root {
-  --bg: #eef2f6;
+  --bg: #f4f7f9;
   --surface: #ffffff;
-  --surface-2: #f7f9fb;
-  --surface-3: #edf2f6;
+  --surface-2: #f8fafb;
+  --surface-3: #eef3f6;
   --text: #101828;
   --muted: #667085;
   --subtle: #98a2b3;
-  --line: #dfe5ec;
+  --line: #e2e8ee;
   --accent: #159447;
   --accent-strong: #0f7437;
   --accent-soft: #e9f7ee;
@@ -25,7 +25,10 @@ html { background: var(--bg); }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 14% -8%, rgba(21,148,71,.065), transparent 24rem),
+    linear-gradient(180deg, #f8fafc 0, #f3f6f8 320px, var(--bg) 760px);
+  background-attachment: fixed;
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -134,7 +137,7 @@ button, input, select { font: inherit; }
 }
 
 .sidebarSection {
-  background: var(--surface);
+  background: rgba(255,255,255,.94);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
@@ -257,7 +260,7 @@ button, input, select { font: inherit; }
 
 .scorePanel {
   margin-top: 14px;
-  background: var(--surface);
+  background: rgba(255,255,255,.96);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 16px;
@@ -403,6 +406,8 @@ button, input, select { font: inherit; }
 
 .leagueCard {
   overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: 260px;
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: 10px;
