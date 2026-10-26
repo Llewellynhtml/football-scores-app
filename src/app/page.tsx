@@ -84,7 +84,7 @@ export default async function Home({ searchParams }: PageProps) {
 
             <div className="sectionHeading compactScoreHeading">
               <div>
-                <p className="eyebrow">{selectedCompetition?.country ?? "WORLD"}</p>
+                {selectedCompetition?.country ? <p className="eyebrow">{selectedCompetition.country}</p> : null}
                 <h2>{selectedCompetition?.name ?? "All competitions"}</h2>
               </div>
               <span className="badge">{fixtures.length} fixtures</span>
