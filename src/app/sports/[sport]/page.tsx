@@ -2,15 +2,13 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { GenericEventList } from "@/components/GenericEventList";
 import { SiteHeader } from "@/components/SiteHeader";
-import { SportDateNav } from "@/components/SportDateNav";
-import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
+import { dateInSouthAfrica, prettyDate } from "@/lib/dates";
 import { getEventsByDate, sportHasKey } from "@/sports/generic/provider";
 import { getSport } from "@/sports/registry";
 import type { UnifiedSportEvent, EventValidationBatch } from "@/sports/generic/types";
 
 type Props = {
   params: Promise<{ sport: string }>;
-  searchParams: Promise<{ date?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -23,14 +21,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function SportPage({ params, searchParams }: Props) {
-  const [{ sport: slug }, query] = await Promise.all([params, searchParams]);
+export default async function SportPage({ params }: Props) {
+  const { sport: slug } = await params;
   const sport = getSport(slug);
   if (!sport) notFound();
   if (slug === "football") redirect("/");
-  if (slug === "rugby") redirect(`/sports/rugby${query.date ? `?date=${query.date}` : ""}`);
+  if (slug === "rugby") redirect("/sports/rugby");
 
-  const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
+  const date = dateInSouthAfrica();
   let events: UnifiedSportEvent[] = [];
   let diagnostics: EventValidationBatch["diagnostics"] = { received: 0, accepted: 0, rejected: 0, reasons: {} };
   let apiError = false;
@@ -45,7 +43,7 @@ export default async function SportPage({ params, searchParams }: Props) {
 
   return (
     <main>
-      <SiteHeader date={date} />
+      <SiteHeader />
 
       <div className="sportScoreShell">
         <section className="scoreboardIntro sportScoreIntro">
@@ -61,8 +59,6 @@ export default async function SportPage({ params, searchParams }: Props) {
         </section>
 
         <section className="scorePanel">
-          <SportDateNav sport={slug} date={date} />
-
           {!sportHasKey(slug) && (
             <div className="notice">
               No API-Sports key is available to this module yet. Add <code>API_SPORTS_KEY</code> or the sport-specific key in Hostinger.
