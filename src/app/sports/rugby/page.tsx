@@ -1,23 +1,17 @@
 import Link from "next/link";
-import { SportDateNav } from "@/components/SportDateNav";
 import { RugbyGameList } from "@/components/RugbyGameList";
 import { SiteHeader } from "@/components/SiteHeader";
-import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
+import { dateInSouthAfrica, prettyDate } from "@/lib/dates";
 import { getRugbyGamesByDate, rugbyConfigured } from "@/sports/rugby/provider";
 import type { RugbyGame } from "@/sports/rugby/types";
-
-type Props = {
-  searchParams: Promise<{ date?: string }>;
-};
 
 export const metadata = {
   title: "Rugby Scores & Fixtures | Live Sports",
   description: "Rugby fixtures, results and live scores from competitions around the world.",
 };
 
-export default async function RugbyPage({ searchParams }: Props) {
-  const query = await searchParams;
-  const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
+export default async function RugbyPage() {
+  const date = dateInSouthAfrica();
 
   let games: RugbyGame[] = [];
   let apiError = false;
@@ -30,7 +24,7 @@ export default async function RugbyPage({ searchParams }: Props) {
 
   return (
     <main>
-      <SiteHeader date={date} />
+      <SiteHeader />
 
       <section className="hero compactHero">
         <p className="eyebrow">RUGBY</p>
@@ -39,8 +33,6 @@ export default async function RugbyPage({ searchParams }: Props) {
       </section>
 
       <section className="content">
-        <SportDateNav sport="rugby" date={date} />
-
         <div className="rugbyActions">
           <Link className="button secondary" href="/sports/rugby/leagues">Browse competitions</Link>
         </div>
