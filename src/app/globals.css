@@ -1040,3 +1040,39 @@ button, input, select { font: inherit; }
     font-size: 16px;
   }
 }
+
+
+.calendarOnlyNav {
+  overflow: visible;
+  align-items: center;
+}
+
+.calendarPickerPrimary {
+  min-width: 210px;
+  border-color: #cbd5df;
+  background: #fff;
+}
+
+.calendarPickerPrimary .calendarPickerLabel {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.calendarPickerPrimary input[type="date"] {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+@media (max-width: 720px) {
+  .calendarOnlyNav {
+    overflow: visible;
+  }
+
+  .calendarPickerPrimary {
+    width: 100%;
+    min-width: 0;
+  }
+}

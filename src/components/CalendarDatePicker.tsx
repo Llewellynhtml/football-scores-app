@@ -15,17 +15,19 @@ export function CalendarDatePicker({
 
   function changeDate(nextDate: string) {
     if (!nextDate) return;
+
     const query = new URLSearchParams({ date: nextDate });
     for (const [key, value] of Object.entries(params)) {
       if (value) query.set(key, value);
     }
+
     router.push(`${basePath}?${query.toString()}`);
   }
 
   return (
-    <label className="calendarPicker">
+    <label className="calendarPicker calendarPickerPrimary">
       <span className="calendarPickerIcon" aria-hidden="true">📅</span>
-      <span className="calendarPickerLabel">Choose date</span>
+      <span className="calendarPickerLabel">Match date</span>
       <input
         aria-label="Choose match date"
         type="date"
