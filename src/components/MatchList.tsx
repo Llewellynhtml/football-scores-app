@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { SafeLogo } from "@/components/SafeLogo";
 import { getCompetitionById } from "@/config/competitions";
 import type { Fixture } from "@/lib/football";
 import { matchUrl, teamUrl } from "@/lib/slug";
@@ -39,7 +39,7 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
           <section className="leagueCard" key={league}>
             <div className="leagueTitle">
               <div className="leagueIdentity">
-                <Image src={matches[0].league.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
+                <SafeLogo src={matches[0].league.logo} alt={matches[0].league.name} fallbackText={matches[0].league.name} size={24} />
                 <div>
                   <small>{matches[0].league.country}</small>
                   <h3>{matches[0].league.name}</h3>
@@ -62,7 +62,7 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
                   </div>
 
                   <Link className="team" href={teamUrl(match.home.name)} prefetch={false}>
-                    <Image src={match.home.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
+                    <SafeLogo src={match.home.logo} alt={match.home.name} fallbackText={match.home.name} size={24} />
                     <span>{match.home.name}</span>
                   </Link>
 
@@ -74,7 +74,7 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
 
                   <Link className="team away" href={teamUrl(match.away.name)} prefetch={false}>
                     <span>{match.away.name}</span>
-                    <Image src={match.away.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
+                    <SafeLogo src={match.away.logo} alt={match.away.name} fallbackText={match.away.name} size={24} />
                   </Link>
                 </article>
               );

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeLogo } from "@/components/SafeLogo";
 import type { UnifiedSportEvent } from "@/sports/generic/types";
 
 const LIVE = new Set(["LIVE", "Q1", "Q2", "Q3", "Q4", "HT", "OT", "P1", "P2", "P3", "IN", "PF", "EOR", "IN1", "IN2", "IN3", "IN4", "IN5", "IN6", "IN7", "IN8", "IN9"]);
@@ -44,11 +44,7 @@ export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]
         <section className="leagueCard" key={label}>
           <div className="leagueTitle">
             <div className="leagueIdentity">
-              {group[0].logo ? (
-                <Image src={group[0].logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" />
-              ) : (
-                <span className="sidebarIcon" aria-hidden="true">{icon}</span>
-              )}
+              <SafeLogo src={group[0].logo} alt={group[0].competition} fallbackText={group[0].competition || icon} size={24} />
               <div>
                 <small>{group[0].country ?? "SPORT"}</small>
                 <h3>{group[0].competition}</h3>
@@ -84,7 +80,7 @@ export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]
                 </div>
 
                 <div className="team">
-                  {event.home.logo ? <Image src={event.home.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" /> : null}
+                  <SafeLogo src={event.home.logo} alt={event.home.name} fallbackText={event.home.name} size={24} />
                   <span>{event.home.name}</span>
                 </div>
 
@@ -96,7 +92,7 @@ export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]
 
                 <div className="team away">
                   <span>{event.away.name}</span>
-                  {event.away.logo ? <Image src={event.away.logo} alt="" width={24} height={24} sizes="24px" quality={50} loading="lazy" /> : null}
+                  <SafeLogo src={event.away.logo} alt={event.away.name} fallbackText={event.away.name} size={24} />
                 </div>
               </article>
             );

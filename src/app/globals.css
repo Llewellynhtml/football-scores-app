@@ -957,3 +957,24 @@ button, input, select { font: inherit; }
     justify-self: start;
   }
 }
+
+
+.safeLogoImage {
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.safeLogoFallback {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: linear-gradient(145deg, #f5f8fa, #e9eef2);
+  color: #667085;
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1;
+  overflow: hidden;
+  user-select: none;
+}

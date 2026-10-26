@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { SafeLogo } from "@/components/SafeLogo";
 import type { RugbyGame } from "@/sports/rugby/types";
 
 function score(value: number | null) {
@@ -34,11 +34,7 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
       {Object.entries(groups).map(([label, leagueGames]) => (
         <section className="leagueCard" key={label}>
           <div className="leagueTitle">
-            {leagueGames[0].league.logo ? (
-              <Image src={leagueGames[0].league.logo} alt="" width={28} height={28} sizes="28px" quality={50} loading="lazy" />
-            ) : (
-              <span aria-hidden="true">🏉</span>
-            )}
+            <SafeLogo src={leagueGames[0].league.logo} alt={leagueGames[0].league.name} fallbackText={leagueGames[0].league.name} size={28} />
             <h3>{label}</h3>
           </div>
 
@@ -47,7 +43,7 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
               <div className="matchMeta"><span>{displayStatus(game)}</span></div>
 
               <div className="team">
-                {game.home.logo ? <Image src={game.home.logo} alt="" width={26} height={26} sizes="26px" quality={50} loading="lazy" /> : null}
+                <SafeLogo src={game.home.logo} alt={game.home.name} fallbackText={game.home.name} size={26} />
                 <span>{game.home.name}</span>
               </div>
 
@@ -59,7 +55,7 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
 
               <div className="team away">
                 <span>{game.away.name}</span>
-                {game.away.logo ? <Image src={game.away.logo} alt="" width={26} height={26} sizes="26px" quality={50} loading="lazy" /> : null}
+                <SafeLogo src={game.away.logo} alt={game.away.name} fallbackText={game.away.name} size={26} />
               </div>
             </article>
           ))}

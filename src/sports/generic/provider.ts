@@ -55,6 +55,38 @@ function scoreValue(value: unknown): string | null {
   return textValue(item.total, item.points, item.score, item.runs, item.value);
 }
 
+const MEDIA_SEGMENT: Record<string, string> = {
+  basketball: "basketball",
+  nba: "nba",
+  "american-football": "american-football",
+  baseball: "baseball",
+  hockey: "hockey",
+  volleyball: "volleyball",
+  handball: "handball",
+  afl: "afl",
+};
+
+function cleanMediaUrl(value: unknown): string | null {
+  const raw = textValue(value);
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function derivedTeamLogo(slug: string, id: number | null) {
+  const segment = MEDIA_SEGMENT[slug];
+  return segment && id ? `https://media.api-sports.io/${segment}/teams/${id}.png` : null;
+}
+
+function derivedLeagueLogo(slug: string, id: number | null) {
+  const segment = MEDIA_SEGMENT[slug];
+  return segment && id ? `https://media.api-sports.io/${segment}/leagues/${id}.png` : null;
+}
+
 function getApiKey(slug: string) {
   const sport = getSport(slug);
   if (!sport) return undefined;
@@ -97,7 +129,7 @@ async function apiArray(
   return Array.isArray(result) ? result : [];
 }
 
-function teamFrom(raw: unknown, side: "home" | "away") {
+function teamFrom(slug: string, raw: unknown, side: "home" | "away") {
   const visitorSide = side === "away" ? "visitors" : "home";
   const name = textValue(
     path(raw, ["teams", side, "name"]),
@@ -106,19 +138,24 @@ function teamFrom(raw: unknown, side: "home" | "away") {
   );
   if (!name) return null;
 
+  const id = numericValue(
+    path(raw, ["teams", side, "id"]),
+    path(raw, ["teams", visitorSide, "id"]),
+    path(raw, ["team", side, "id"]),
+  );
+
   return {
     name,
-    logo: textValue(
-      path(raw, ["teams", side, "logo"]),
-      path(raw, ["teams", visitorSide, "logo"]),
-      path(raw, ["team", side, "logo"]),
-    ),
+    logo: cleanMediaUrl(path(raw, ["teams", side, "logo"]))
+      ?? cleanMediaUrl(path(raw, ["teams", visitorSide, "logo"]))
+      ?? cleanMediaUrl(path(raw, ["team", side, "logo"]))
+      ?? derivedTeamLogo(slug, id),
   };
 }
 
 function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
-  const home = teamFrom(raw, "home");
-  const away = teamFrom(raw, "away");
+  const home = teamFrom(slug, raw, "home");
+  const away = teamFrom(slug, raw, "away");
 
   const status = textValue(
     path(raw, ["status", "short"]),
@@ -149,10 +186,9 @@ function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
       path(raw, ["league", "country"]),
       path(raw, ["country"]),
     ),
-    logo: textValue(
-      path(raw, ["league", "logo"]),
-      path(raw, ["competition", "logo"]),
-    ),
+    logo: cleanMediaUrl(path(raw, ["league", "logo"]))
+      ?? cleanMediaUrl(path(raw, ["competition", "logo"]))
+      ?? derivedLeagueLogo(slug, numericValue(path(raw, ["league", "id"]), path(raw, ["competition", "id"]))),
     home,
     away,
     homeScore: scoreValue(path(raw, ["scores", "home"]))
@@ -195,8 +231,8 @@ function normalizeMma(raw: unknown): UnifiedSportEvent {
     ) ?? "MMA",
     country: textValue(path(raw, ["country", "name"]), path(raw, ["country"])),
     logo: null,
-    home: homeName ? { name: homeName, logo: textValue(path(raw, ["fighters", "first", "logo"])) } : null,
-    away: awayName ? { name: awayName, logo: textValue(path(raw, ["fighters", "second", "logo"])) } : null,
+    home: homeName ? { name: homeName, logo: cleanMediaUrl(path(raw, ["fighters", "first", "logo"])) } : null,
+    away: awayName ? { name: awayName, logo: cleanMediaUrl(path(raw, ["fighters", "second", "logo"])) } : null,
     homeScore: null,
     awayScore: null,
     title: homeName && awayName ? null : textValue(path(raw, ["name"]), path(raw, ["event", "name"])),
@@ -222,7 +258,7 @@ function normalizeRace(raw: unknown): UnifiedSportEvent {
       path(raw, ["competition", "location", "country"]),
       path(raw, ["country"]),
     ),
-    logo: textValue(path(raw, ["competition", "logo"])),
+    logo: cleanMediaUrl(path(raw, ["competition", "logo"])),
     home: null,
     away: null,
     homeScore: null,
