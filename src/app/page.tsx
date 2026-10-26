@@ -54,7 +54,7 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <main>
-      <SiteHeader />
+      <SiteHeader date={date} />
 
       <div className="scoreboardShell">
         <FootballSidebar />

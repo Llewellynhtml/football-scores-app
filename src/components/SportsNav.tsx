@@ -1,19 +1,13 @@
-"use client";
-
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { SPORTS } from "@/sports/registry";
 
-function datedHref(path: string, date: string | null) {
+function datedHref(path: string, date?: string) {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return path;
   const params = new URLSearchParams({ date });
   return `${path}?${params.toString()}`;
 }
 
-export function SportsNav() {
-  const searchParams = useSearchParams();
-  const selectedDate = searchParams.get("date");
-
+export function SportsNav({ date }: { date?: string }) {
   return (
     <div className="sportsNavWrap">
       <nav className="sportsNav" aria-label="Sports">
@@ -22,7 +16,7 @@ export function SportsNav() {
           return (
             <Link
               className={sport.status === "live" ? "sportTab liveSport" : "sportTab"}
-              href={datedHref(path, selectedDate)}
+              href={datedHref(path, date)}
               key={sport.slug}
             >
               <span aria-hidden="true">{sport.icon}</span>
@@ -30,7 +24,7 @@ export function SportsNav() {
             </Link>
           );
         })}
-        <Link className="sportTab" href={datedHref("/sports", selectedDate)}>All sports</Link>
+        <Link className="sportTab" href={datedHref("/sports", date)}>All sports</Link>
       </nav>
     </div>
   );

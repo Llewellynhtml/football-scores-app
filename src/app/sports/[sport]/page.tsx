@@ -45,7 +45,7 @@ export default async function SportPage({ params, searchParams }: Props) {
 
   return (
     <main>
-      <SiteHeader />
+      <SiteHeader date={date} />
 
       <div className="sportScoreShell">
         <section className="scoreboardIntro sportScoreIntro">

@@ -1,8 +1,3 @@
-"use client";
-
-import Image from "next/image";
-import { useEffect, useState } from "react";
-
 function initials(value: string) {
   const words = value
     .replace(/[^a-zA-Z0-9 ]/g, " ")
@@ -17,6 +12,7 @@ function initials(value: string) {
 
 function isSupportedLogo(src: string | null | undefined) {
   if (!src) return false;
+
   try {
     const url = new URL(src);
     return url.protocol === "https:" && url.hostname === "media.api-sports.io";
@@ -36,13 +32,9 @@ export function SafeLogo({
   fallbackText?: string;
   size?: number;
 }) {
-  const [failed, setFailed] = useState(false);
+  const fallback = initials(fallbackText ?? alt);
 
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
-
-  if (!isSupportedLogo(src) || failed) {
+  if (!isSupportedLogo(src)) {
     return (
       <span
         className="safeLogoFallback"
@@ -50,22 +42,28 @@ export function SafeLogo({
         aria-label={alt}
         title={alt}
       >
-        {initials(fallbackText ?? alt)}
+        {fallback}
       </span>
     );
   }
 
   return (
-    <Image
-      className="safeLogoImage"
-      src={src!}
-      alt={alt}
-      width={size}
-      height={size}
-      sizes={`${size}px`}
-      quality={50}
-      loading="lazy"
-      onError={() => setFailed(true)}
-    />
+    <span
+      className="safeLogoFrame"
+      style={{ width: size, height: size }}
+      title={alt}
+    >
+      <object
+        className="safeLogoObject"
+        data={src!}
+        aria-label={alt}
+        width={size}
+        height={size}
+      >
+        <span className="safeLogoFallback safeLogoFallbackInner">
+          {fallback}
+        </span>
+      </object>
+    </span>
   );
 }

@@ -1,19 +1,7 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { SportsNav } from "@/components/SportsNav";
 
-function SportsNavFallback() {
-  return (
-    <div className="sportsNavWrap">
-      <nav className="sportsNav" aria-label="Sports">
-        <span className="sportTab liveSport">⚽ Football</span>
-        <span className="sportTab">Loading sports…</span>
-      </nav>
-    </div>
-  );
-}
-
-export function SiteHeader() {
+export function SiteHeader({ date }: { date?: string }) {
   return (
     <>
       <header className="topbar">
@@ -26,9 +14,7 @@ export function SiteHeader() {
         </nav>
       </header>
 
-      <Suspense fallback={<SportsNavFallback />}>
-        <SportsNav />
-      </Suspense>
+      <SportsNav date={date} />
     </>
   );
 }

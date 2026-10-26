@@ -1,7 +1,3 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-
 export function CalendarDatePicker({
   date,
   basePath,
@@ -11,29 +7,26 @@ export function CalendarDatePicker({
   basePath: string;
   params?: Record<string, string | undefined>;
 }) {
-  const router = useRouter();
-
-  function changeDate(nextDate: string) {
-    if (!nextDate) return;
-
-    const query = new URLSearchParams({ date: nextDate });
-    for (const [key, value] of Object.entries(params)) {
-      if (value) query.set(key, value);
-    }
-
-    router.push(`${basePath}?${query.toString()}`);
-  }
-
   return (
-    <label className="calendarPicker calendarPickerPrimary">
+    <form className="calendarPicker calendarPickerPrimary" action={basePath} method="get">
+      {Object.entries(params).map(([key, value]) =>
+        value ? <input key={key} type="hidden" name={key} value={value} /> : null,
+      )}
+
       <span className="calendarPickerIcon" aria-hidden="true">📅</span>
-      <span className="calendarPickerLabel">Match date</span>
-      <input
-        aria-label="Choose match date"
-        type="date"
-        value={date}
-        onChange={(event) => changeDate(event.target.value)}
-      />
-    </label>
+
+      <label className="calendarPickerFields">
+        <span className="calendarPickerLabel">Match date</span>
+        <input
+          aria-label="Choose match date"
+          name="date"
+          type="date"
+          defaultValue={date}
+          required
+        />
+      </label>
+
+      <button className="calendarApply" type="submit">Apply</button>
+    </form>
   );
 }

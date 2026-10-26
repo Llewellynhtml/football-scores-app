@@ -30,7 +30,7 @@ export default async function RugbyPage({ searchParams }: Props) {
 
   return (
     <main>
-      <SiteHeader />
+      <SiteHeader date={date} />
 
       <section className="hero compactHero">
         <p className="eyebrow">RUGBY</p>
