@@ -1,14 +1,19 @@
 import Link from "next/link";
+import { SportsNav } from "@/components/SportsNav";
 
 export function SiteHeader() {
   return (
-    <header className="topbar">
-      <Link className="brand" href="/">FOOTBALL SCORES</Link>
-      <nav>
-        <Link href="/">Scores</Link>
-        <Link href="/leagues">Leagues</Link>
-        <Link href="/teams">Teams</Link>
-      </nav>
-    </header>
+    <>
+      <header className="topbar">
+        <Link className="brand" href="/">LIVE SPORTS</Link>
+        <nav className="primaryNav">
+          <Link href="/">Scores</Link>
+          <Link href="/leagues">Football leagues</Link>
+          <Link href="/teams">Football teams</Link>
+          <Link href="/sports">Sports</Link>
+        </nav>
+      </header>
+      <SportsNav />
+    </>
   );
 }
