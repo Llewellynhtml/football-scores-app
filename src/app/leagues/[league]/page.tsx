@@ -4,19 +4,28 @@ import { notFound } from "next/navigation";
 import { MatchList } from "@/components/MatchList";
 import { SafeLogo } from "@/components/SafeLogo";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getLeagueFixtures, resolveLeague } from "@/lib/football";
+import { getLeagueFixtures, resolveLeague, type Fixture, type LeagueCatalogItem } from "@/lib/football";
 
 type Props = { params: Promise<{ league: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { league } = await params;
-  const competition = await resolveLeague(league);
-  if (!competition) return { title: "League not found" };
 
-  return {
-    title: `${competition.name} Fixtures & Results | Live Sports`,
-    description: `${competition.name} fixtures and results for season ${competition.season.year}.`,
-  };
+  try {
+    const competition = await resolveLeague(league);
+    if (!competition) return { title: "League not found" };
+
+    return {
+      title: `${competition.name} Fixtures & Results | Live Sports`,
+      description: `${competition.name} fixtures and results for season ${competition.season.year}.`,
+    };
+  } catch (error) {
+    console.error("League metadata API error", { league, error });
+    return {
+      title: "League fixtures | Live Sports",
+      description: "Football league fixtures and results.",
+    };
+  }
 }
 
 function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof resolveLeague>>>["season"]["coverage"]) {
@@ -35,10 +44,46 @@ function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof resolveLe
 
 export default async function LeaguePage({ params }: Props) {
   const { league } = await params;
-  const competition = await resolveLeague(league);
-  if (!competition) notFound();
+  let competition: LeagueCatalogItem | null = null;
+  let fixtures: Fixture[] = [];
+  let apiError = false;
 
-  const fixtures = await getLeagueFixtures(league);
+  try {
+    competition = await resolveLeague(league);
+  } catch (error) {
+    apiError = true;
+    console.error("Unable to resolve API-Football league", { league, error });
+  }
+
+  if (!competition && !apiError) notFound();
+
+  if (competition) {
+    try {
+      fixtures = await getLeagueFixtures(competition.routeKey);
+    } catch (error) {
+      apiError = true;
+      console.error("Unable to load API-Football league fixtures", {
+        league: competition.routeKey,
+        error,
+      });
+    }
+  }
+
+  if (!competition) {
+    return (
+      <main>
+        <SiteHeader />
+        <section className="content pageTop">
+          <div className="notice error">
+            League data could not be loaded from API-Football right now. Please try again later.
+          </div>
+          <div className="cardActions leaguePageActions">
+            <Link href="/leagues">All leagues</Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -77,7 +122,13 @@ export default async function LeaguePage({ params }: Props) {
           </div>
         </div>
 
-        <MatchList fixtures={fixtures} />
+        {apiError ? (
+          <div className="notice error">
+            API-Football could not return fixtures for this competition right now. The page remains available instead of failing.
+          </div>
+        ) : (
+          <MatchList fixtures={fixtures} />
+        )}
       </section>
     </main>
   );
