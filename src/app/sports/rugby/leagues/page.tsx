@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeLogo } from "@/components/SafeLogo";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getRugbyLeagues, rugbyConfigured } from "@/sports/rugby/provider";
@@ -38,7 +38,7 @@ export default async function RugbyLeaguesPage() {
         <div className="cardGrid">
           {leagues.slice(0, 60).map((league) => (
             <article className="featureCard" key={league.id}>
-              {league.logo ? <Image src={league.logo} alt="" width={38} height={38} /> : null}
+              <SafeLogo src={league.logo ?? null} alt={league.name} fallbackText={league.name} size={38} />
               {league.country?.name ? <span className="featureCode">{league.country.name}</span> : null}
               <h2>{league.name}</h2>
               {league.type ? <p>{league.type}</p> : null}
