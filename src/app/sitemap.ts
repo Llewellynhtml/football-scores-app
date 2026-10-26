@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getFootballLeagueCatalog } from "@/lib/football";
+import { getFootballLeagueCatalog, type LeagueCatalogItem } from "@/lib/football";
 import { SPORTS } from "@/sports/registry";
 
 export const revalidate = 86400;
@@ -8,7 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.SITE_URL ?? "https://palegoldenrod-clam-775783.hostingersite.com";
   const now = new Date();
 
-  let leagues = [];
+  let leagues: LeagueCatalogItem[] = [];
   try {
     leagues = await getFootballLeagueCatalog();
   } catch {
