@@ -66,7 +66,7 @@ export default async function Home({ searchParams }: PageProps) {
           </section>
 
           <section className="scorePanel">
-            <DateNav date={date} league={selectedCompetition?.slug} />
+            <DateNav date={date} league={selectedCompetition?.slug} status={status} />
             <StatusFilter date={date} league={selectedCompetition?.slug} selected={status} />
             <CompetitionFilter date={date} selected={selectedCompetition?.slug} />
 

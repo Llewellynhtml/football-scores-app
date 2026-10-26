@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DateNav } from "@/components/DateNav";
+import { SportDateNav } from "@/components/SportDateNav";
 import { RugbyGameList } from "@/components/RugbyGameList";
 import { SiteHeader } from "@/components/SiteHeader";
 import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
@@ -39,7 +39,7 @@ export default async function RugbyPage({ searchParams }: Props) {
       </section>
 
       <section className="content">
-        <DateNav date={date} />
+        <SportDateNav sport="rugby" date={date} />
 
         <div className="rugbyActions">
           <Link className="button secondary" href="/sports/rugby/leagues">Browse competitions</Link>

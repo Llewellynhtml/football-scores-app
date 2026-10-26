@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { shiftDate } from "@/lib/dates";
+import { CalendarDatePicker } from "@/components/CalendarDatePicker";
+import { dateInSouthAfrica, shiftDate } from "@/lib/dates";
 
 export function SportDateNav({ sport, date }: { sport: string; date: string }) {
+  const today = dateInSouthAfrica();
   const items = [
     { label: "Yesterday", value: shiftDate(date, -1) },
-    { label: "Selected", value: date },
+    { label: date === today ? "Today" : "Selected", value: date },
     { label: "Tomorrow", value: shiftDate(date, 1) },
   ];
 
@@ -20,6 +22,8 @@ export function SportDateNav({ sport, date }: { sport: string; date: string }) {
           <small>{item.value.slice(5)}</small>
         </Link>
       ))}
+
+      <CalendarDatePicker date={date} basePath={`/sports/${sport}`} />
     </div>
   );
 }
