@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LeagueCatalog, type LeagueCatalogRow } from "@/components/LeagueCatalog";
 import { SiteHeader } from "@/components/SiteHeader";
 import { FEATURED_COMPETITIONS } from "@/config/competitions";
-import { getFootballLeagueCatalog } from "@/lib/football";
+import { getFootballLeagueCatalog, type LeagueCatalogItem } from "@/lib/football";
 
 export const metadata = {
   title: "Football Leagues & Cups | Live Sports",
@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function LeaguesPage() {
-  let catalogue = [];
+  let catalogue: LeagueCatalogItem[] = [];
   let apiError = false;
 
   try {
