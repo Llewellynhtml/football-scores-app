@@ -97,7 +97,9 @@ function normalizeStatus(status: RawGame["status"]) {
   };
 }
 
-function countryObject(country: RawGame["league"] extends infer L ? L extends {country?: infer C} ? C : never : never) {
+type RugbyCountry = { name?: string | null; code?: string | null; flag?: string | null } | string | null | undefined;
+
+function countryObject(country: RugbyCountry) {
   if (!country) return null;
   if (typeof country === "string") return { name: country, code: null, flag: null };
   return {

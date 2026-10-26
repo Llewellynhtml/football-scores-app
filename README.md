@@ -12,7 +12,7 @@ Next.js platform
 ├── Basketball (registered)
 ├── NBA (registered)
 ├── American Football / NFL (registered)
-├── Rugby (registered)
+├── Rugby provider (IMPLEMENTED; activates when API_RUGBY_KEY is configured)
 ├── Formula 1 (registered)
 ├── Baseball (registered)
 ├── Hockey (registered)
@@ -55,6 +55,18 @@ Next.js platform
 - `/api/sports` — safe configuration/status view
 
 Football remains live at `/` and `/football` redirects there so existing URLs do not break.
+
+## Rugby module
+
+Rugby now has a real server-side provider and UI routes:
+
+- `/sports/rugby` — date-based rugby scores and fixtures
+- `/sports/rugby/leagues` — competition catalogue
+- `/sports/rugby/leagues/[id]` — competition games
+- `/sports/rugby/games/[id]` — individual game page
+- `/api/rugby/health` — configuration health check
+
+The module makes **zero Rugby API calls** until `API_RUGBY_KEY` is added in Hostinger.
 
 ## Football routes
 
