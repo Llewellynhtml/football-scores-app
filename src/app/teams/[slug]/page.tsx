@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { SafeLogo } from "@/components/SafeLogo";
 import { notFound } from "next/navigation";
 import { MatchList } from "@/components/MatchList";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getTeamBySlug, getTeamFixtures } from "@/lib/football";
-import { humanizeSlug } from "@/lib/slug";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const name = humanizeSlug(slug);
+  const team = await getTeamBySlug(slug);
+  if (!team) return { title: "Team not found" };
+
   return {
-    title: `${name} Fixtures & Team Profile | Football Scores`,
-    description: `Latest ${name} team information and upcoming fixtures.`,
+    title: `${team.name} Fixtures & Team Profile | Football Scores`,
+    description: `Latest ${team.name} team information and upcoming fixtures.`,
   };
 }
 
@@ -29,14 +30,17 @@ export default async function TeamPage({ params }: Props) {
       <SiteHeader />
       <section className="content pageTop">
         <div className="teamHero">
-          <Image src={team.logo} alt={team.name} width={84} height={84} />
+          <SafeLogo src={team.logo} alt={team.name} fallbackText={team.name} size={84} />
           <div>
             <p className="eyebrow">{team.country}</p>
             <h1 className="pageTitle">{team.name}</h1>
-            <p className="muted">
-              {team.founded ? `Founded ${team.founded}` : "Football club"}
-              {team.venue?.name ? ` · ${team.venue.name}` : ""}
-            </p>
+            {team.founded || team.venue?.name ? (
+              <p className="muted">
+                {team.founded ? `Founded ${team.founded}` : ""}
+                {team.founded && team.venue?.name ? " · " : ""}
+                {team.venue?.name ?? ""}
+              </p>
+            ) : null}
           </div>
         </div>
 
