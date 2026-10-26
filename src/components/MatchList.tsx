@@ -25,7 +25,7 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
       <div className="emptyState">
         <div className="emptyIcon">⌁</div>
         <h3>No matches found</h3>
-        <p>Try another date, competition or match-status filter.</p>
+        <p>API-Football returned no matches for the current competition or match-status filter.</p>
       </div>
     );
   }
