@@ -8,18 +8,16 @@ const FILTERS = [
 ];
 
 export function StatusFilter({
-  date,
   league,
   selected = "all",
 }: {
-  date: string;
   league?: string;
   selected?: string;
 }) {
   return (
     <div className="statusFilters" aria-label="Match status filter">
       {FILTERS.map((filter) => {
-        const params = new URLSearchParams({ date });
+        const params = new URLSearchParams();
         if (league) params.set("league", league);
         if (filter.value !== "all") params.set("status", filter.value);
 
