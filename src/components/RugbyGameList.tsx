@@ -3,12 +3,12 @@ import { SafeLogo } from "@/components/SafeLogo";
 import type { RugbyGame } from "@/sports/rugby/types";
 
 function score(value: number | null) {
-  return value === null ? "-" : String(value);
+  return value === null ? "—" : String(value);
 }
 
 function displayStatus(game: RugbyGame) {
   if (game.status.short.toLowerCase().includes("finished")) return "FT";
-  if (game.status.short.toLowerCase().includes("not")) return game.time ?? "TBD";
+  if (game.status.short.toLowerCase().includes("not")) return game.time ?? game.status.short;
   return game.status.short;
 }
 
