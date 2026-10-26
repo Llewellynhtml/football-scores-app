@@ -110,7 +110,7 @@ async function apiGet<T>(
   params: Record<string, string | number | undefined>,
   revalidate: number,
 ): Promise<T[]> {
-  const key = process.env.API_FOOTBALL_KEY;
+  const key = process.env.API_FOOTBALL_KEY ?? process.env.API_SPORTS_KEY;
   if (!key) return [];
 
   const url = new URL(pathname, BASE_URL);
@@ -152,13 +152,13 @@ export async function getFixturesByDate(date: string): Promise<Fixture[]> {
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     { date, timezone: "Africa/Johannesburg" },
-    60,
+    1800,
   );
   return data.map(mapFixture);
 }
 
 export async function getFixtureById(id: number): Promise<Fixture | null> {
-  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, 60);
+  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, 900);
   return data[0] ? mapFixture(data[0]) : null;
 }
 
@@ -176,7 +176,7 @@ export async function getLeagueFixtures(slug: string): Promise<Fixture[]> {
       to: shiftDate(today, 14),
       timezone: "Africa/Johannesburg",
     },
-    600,
+    1800,
   );
 
   return data.map(mapFixture);
@@ -191,7 +191,7 @@ export async function getStandings(slug: string): Promise<StandingRow[]> {
   }>(
     "/standings",
     { league: competition.id, season: currentFootballSeason() },
-    3600,
+    21600,
   );
 
   const table = data[0]?.league.standings?.[0] ?? [];

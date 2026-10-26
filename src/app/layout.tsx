@@ -9,12 +9,12 @@ export const metadata: Metadata = {
     default: "Live Sports",
     template: "%s",
   },
-  description: "Live scores, fixtures, results, standings and sports data. Football is the first active sport module.",
+  description: "Live scores, fixtures, results and schedules across football, rugby, basketball, NBA, NFL, Formula 1, baseball, hockey, MMA, volleyball, handball and AFL.",
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
     title: "Live Sports",
-    description: "A multi-sport scores and statistics platform.",
+    description: "A multi-sport live scores and statistics platform.",
     url: siteUrl,
   },
 };

@@ -17,8 +17,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Basketball",
     shortName: "Basketball",
     icon: "🏀",
-    status: "ready",
-    description: "Basketball games, leagues, teams and standings.",
+    status: "live",
+    description: "Basketball games, live scores, leagues and results.",
     apiKeyEnv: "API_BASKETBALL_KEY",
     baseUrlEnv: "API_BASKETBALL_BASE_URL",
     defaultBaseUrl: "https://v1.basketball.api-sports.io",
@@ -28,8 +28,8 @@ export const SPORTS: SportDefinition[] = [
     name: "NBA",
     shortName: "NBA",
     icon: "🏀",
-    status: "ready",
-    description: "NBA games, teams, players and standings.",
+    status: "live",
+    description: "NBA games, live scores, teams and results.",
     apiKeyEnv: "API_NBA_KEY",
     baseUrlEnv: "API_NBA_BASE_URL",
     defaultBaseUrl: "https://v2.nba.api-sports.io",
@@ -39,8 +39,8 @@ export const SPORTS: SportDefinition[] = [
     name: "American Football",
     shortName: "NFL",
     icon: "🏈",
-    status: "ready",
-    description: "NFL and American football schedules, teams and standings.",
+    status: "live",
+    description: "NFL and NCAA schedules, live scores and results.",
     apiKeyEnv: "API_AMERICAN_FOOTBALL_KEY",
     baseUrlEnv: "API_AMERICAN_FOOTBALL_BASE_URL",
     defaultBaseUrl: "https://v1.american-football.api-sports.io",
@@ -50,8 +50,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Rugby",
     shortName: "Rugby",
     icon: "🏉",
-    status: "ready",
-    description: "Rugby fixtures, results, competitions and team pages.",
+    status: "live",
+    description: "Rugby fixtures, live scores, results and competitions.",
     apiKeyEnv: "API_RUGBY_KEY",
     baseUrlEnv: "API_RUGBY_BASE_URL",
     defaultBaseUrl: "https://v1.rugby.api-sports.io",
@@ -61,8 +61,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Formula 1",
     shortName: "F1",
     icon: "🏎️",
-    status: "ready",
-    description: "Races, circuits, drivers, teams and championship standings.",
+    status: "live",
+    description: "Formula 1 races, circuits and race schedules.",
     apiKeyEnv: "API_FORMULA1_KEY",
     baseUrlEnv: "API_FORMULA1_BASE_URL",
     defaultBaseUrl: "https://v1.formula-1.api-sports.io",
@@ -72,8 +72,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Baseball",
     shortName: "Baseball",
     icon: "⚾",
-    status: "ready",
-    description: "Baseball games, leagues, teams and standings.",
+    status: "live",
+    description: "Baseball games, live scores, leagues and results.",
     apiKeyEnv: "API_BASEBALL_KEY",
     baseUrlEnv: "API_BASEBALL_BASE_URL",
     defaultBaseUrl: "https://v1.baseball.api-sports.io",
@@ -83,8 +83,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Hockey",
     shortName: "Hockey",
     icon: "🏒",
-    status: "ready",
-    description: "Hockey games, competitions, teams and standings.",
+    status: "live",
+    description: "Hockey games, live scores, competitions and results.",
     apiKeyEnv: "API_HOCKEY_KEY",
     baseUrlEnv: "API_HOCKEY_BASE_URL",
     defaultBaseUrl: "https://v1.hockey.api-sports.io",
@@ -94,8 +94,8 @@ export const SPORTS: SportDefinition[] = [
     name: "MMA",
     shortName: "MMA",
     icon: "🥊",
-    status: "ready",
-    description: "MMA events, fights and fighter information.",
+    status: "live",
+    description: "MMA fight cards, live fight status and schedules.",
     apiKeyEnv: "API_MMA_KEY",
     baseUrlEnv: "API_MMA_BASE_URL",
     defaultBaseUrl: "https://v1.mma.api-sports.io",
@@ -105,8 +105,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Volleyball",
     shortName: "Volleyball",
     icon: "🏐",
-    status: "ready",
-    description: "Volleyball fixtures, leagues, teams and standings.",
+    status: "live",
+    description: "Volleyball fixtures, live scores and results.",
     apiKeyEnv: "API_VOLLEYBALL_KEY",
     baseUrlEnv: "API_VOLLEYBALL_BASE_URL",
     defaultBaseUrl: "https://v1.volleyball.api-sports.io",
@@ -116,8 +116,8 @@ export const SPORTS: SportDefinition[] = [
     name: "Handball",
     shortName: "Handball",
     icon: "🤾",
-    status: "ready",
-    description: "Handball matches, competitions and team pages.",
+    status: "live",
+    description: "Handball matches, live scores and results.",
     apiKeyEnv: "API_HANDBALL_KEY",
     baseUrlEnv: "API_HANDBALL_BASE_URL",
     defaultBaseUrl: "https://v1.handball.api-sports.io",
@@ -127,8 +127,8 @@ export const SPORTS: SportDefinition[] = [
     name: "AFL",
     shortName: "AFL",
     icon: "🏉",
-    status: "ready",
-    description: "Australian football fixtures, teams and competition data.",
+    status: "live",
+    description: "Australian football fixtures, live scores and results.",
     apiKeyEnv: "API_AFL_KEY",
     baseUrlEnv: "API_AFL_BASE_URL",
     defaultBaseUrl: "https://v1.afl.api-sports.io",
@@ -140,9 +140,13 @@ export function getSport(slug: string) {
 }
 
 export function isSportConfigured(sport: SportDefinition) {
-  return Boolean(process.env[sport.apiKeyEnv]);
+  return Boolean(
+    process.env[sport.apiKeyEnv]
+    ?? process.env.API_SPORTS_KEY
+    ?? process.env.API_FOOTBALL_KEY
+  );
 }
 
 export function enabledSports() {
-  return SPORTS.filter((sport) => sport.status === "live" || isSportConfigured(sport));
+  return SPORTS.filter((sport) => sport.status === "live" && isSportConfigured(sport));
 }

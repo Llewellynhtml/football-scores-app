@@ -4,7 +4,7 @@ import { SPORTS, isSportConfigured } from "@/sports/registry";
 
 export const metadata = {
   title: "Sports | Live Sports",
-  description: "Browse the sports available in the multi-sport scores platform.",
+  description: "Live scores and schedules across all supported API-Sports products.",
 };
 
 export default function SportsPage() {
@@ -13,28 +13,27 @@ export default function SportsPage() {
       <SiteHeader />
       <section className="content pageTop">
         <p className="eyebrow">MULTI-SPORT PLATFORM</p>
-        <h1 className="pageTitle">Sports</h1>
+        <h1 className="pageTitle">All sports</h1>
         <p className="muted sportsIntro">
-          Football is live today. The remaining API-Sports products are registered in the
-          platform architecture and can be activated one at a time without rebuilding the site.
+          Every sport below now has a live data route. On the free API-Sports tier,
+          score pages use conservative caching to protect each sport&apos;s daily request allowance.
         </p>
 
         <div className="sportsGrid">
           {SPORTS.map((sport) => {
             const configured = isSportConfigured(sport);
-            const live = sport.status === "live";
             return (
               <Link
                 className="sportCard"
-                href={live ? "/" : `/sports/${sport.slug}`}
+                href={sport.slug === "football" ? "/" : `/sports/${sport.slug}`}
                 key={sport.slug}
               >
                 <div className="sportIcon" aria-hidden="true">{sport.icon}</div>
                 <div>
                   <div className="sportCardTop">
                     <h2>{sport.name}</h2>
-                    <span className={live ? "status live" : configured ? "status configured" : "status"}>
-                      {live ? "Live" : configured ? "Configured" : "Ready"}
+                    <span className={configured ? "status live" : "status"}>
+                      {configured ? "Live" : "Key needed"}
                     </span>
                   </div>
                   <p>{sport.description}</p>

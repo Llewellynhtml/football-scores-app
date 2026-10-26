@@ -54,7 +54,7 @@ type RawStanding = {
 const BASE_URL = process.env.API_RUGBY_BASE_URL ?? "https://v1.rugby.api-sports.io";
 
 function key() {
-  return process.env.API_RUGBY_KEY;
+  return process.env.API_RUGBY_KEY ?? process.env.API_SPORTS_KEY ?? process.env.API_FOOTBALL_KEY;
 }
 
 async function apiGet<T>(
@@ -145,21 +145,21 @@ export function rugbyConfigured() {
 }
 
 export async function getRugbyGamesByDate(date: string) {
-  const data = await apiGet<RawGame>("/games", { date }, 120);
+  const data = await apiGet<RawGame>("/games", { date, timezone: "Africa/Johannesburg" }, 900);
   return data.map(mapGame);
 }
 
 export async function getRugbyGameById(id: number) {
-  const data = await apiGet<RawGame>("/games", { id }, 120);
+  const data = await apiGet<RawGame>("/games", { id }, 900);
   return data[0] ? mapGame(data[0]) : null;
 }
 
 export async function getRugbyLeagues() {
-  return apiGet<RawLeague>("/leagues", {}, 43200);
+  return apiGet<RawLeague>("/leagues", {}, 86400);
 }
 
 export async function getRugbyLeagueGames(league: number, season?: number) {
-  const data = await apiGet<RawGame>("/games", { league, season }, 900);
+  const data = await apiGet<RawGame>("/games", { league, season }, 1800);
   return data.map(mapGame);
 }
 
@@ -167,7 +167,7 @@ export async function getRugbyStandings(league: number, season: number): Promise
   const data = await apiGet<{ league?: { standings?: RawStanding[][] } }>(
     "/standings",
     { league, season },
-    3600,
+    21600,
   );
 
   const table = data[0]?.league?.standings?.[0] ?? [];

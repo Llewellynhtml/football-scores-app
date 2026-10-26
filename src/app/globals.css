@@ -890,3 +890,70 @@ button, input, select { font: inherit; }
   .sportLandingHero { align-items: flex-start; }
   .modulePlan { grid-template-columns: 1fr; }
 }
+
+
+.sportScoreShell {
+  width: min(1120px, calc(100% - 40px));
+  margin: 22px auto 70px;
+}
+
+.sportScoreIntro {
+  margin-bottom: 14px;
+}
+
+.eventRow {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 13px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.eventRow:last-child { border-bottom: 0; }
+
+.eventTitle {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.eventTitle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.eventTitle small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.singleEvent .statusBadge {
+  justify-self: end;
+}
+
+@media (max-width: 720px) {
+  .sportScoreShell {
+    width: 100%;
+    margin: 0 0 52px;
+  }
+
+  .sportScoreIntro {
+    margin-bottom: 0;
+    border-radius: 0;
+  }
+
+  .eventRow {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .singleEvent .statusBadge {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
