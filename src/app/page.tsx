@@ -3,12 +3,12 @@ import { FootballSidebar } from "@/components/FootballSidebar";
 import { MatchList } from "@/components/MatchList";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StatusFilter } from "@/components/StatusFilter";
-import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
+import { dateInSouthAfrica, prettyDate } from "@/lib/dates";
 import { competitionsFromFixtures, getFixturesByDate, type Fixture } from "@/lib/football";
 import { slugify } from "@/lib/slug";
 
 type PageProps = {
-  searchParams: Promise<{ date?: string; league?: string; status?: string }>;
+  searchParams: Promise<{ league?: string; status?: string }>;
 };
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE"]);
@@ -17,7 +17,7 @@ const SCHEDULED_STATUSES = new Set(["NS", "TBD"]);
 
 export default async function Home({ searchParams }: PageProps) {
   const query = await searchParams;
-  const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
+  const date = dateInSouthAfrica();
   const status = ["live", "finished", "scheduled"].includes(query.status ?? "")
     ? query.status!
     : "all";
@@ -53,7 +53,7 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <main>
-      <SiteHeader date={date} />
+      <SiteHeader />
 
       <div className="scoreboardShell">
         <FootballSidebar />
@@ -72,9 +72,8 @@ export default async function Home({ searchParams }: PageProps) {
           </section>
 
           <section className="scorePanel">
-            <StatusFilter date={date} league={selectedCompetition?.routeKey} selected={status} />
+            <StatusFilter league={selectedCompetition?.routeKey} selected={status} />
             <CompetitionFilter
-              date={date}
               competitions={competitions}
               selected={selectedCompetition?.routeKey}
               status={status}
