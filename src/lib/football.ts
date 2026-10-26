@@ -447,6 +447,17 @@ export async function getLeagueSnapshot(routeKey: string): Promise<LeagueDataSna
   };
 }
 
+export async function searchTeams(query: string): Promise<TeamProfile[]> {
+  const search = query.trim();
+  if (search.length < 3) return [];
+
+  const data = await apiGet<ApiTeam>("/teams", { search }, 86400);
+  return data
+    .map(mapTeam)
+    .filter((team): team is TeamProfile => team !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export async function getTeamBySlug(slug: string): Promise<TeamProfile | null> {
   const search = slug.replace(/-/g, " ");
   const data = await apiGet<ApiTeam>("/teams", { search }, 43200);
