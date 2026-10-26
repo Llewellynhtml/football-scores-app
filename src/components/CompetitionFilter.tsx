@@ -2,18 +2,16 @@ import Link from "next/link";
 import type { FixtureCompetition } from "@/lib/football";
 
 export function CompetitionFilter({
-  date,
   competitions,
   selected,
   status,
 }: {
-  date: string;
   competitions: FixtureCompetition[];
   selected?: string;
   status?: string;
 }) {
   function href(routeKey?: string) {
-    const params = new URLSearchParams({ date });
+    const params = new URLSearchParams();
     if (routeKey) params.set("league", routeKey);
     if (status && status !== "all") params.set("status", status);
     return `/?${params.toString()}`;
