@@ -1,17 +1,34 @@
 import Link from "next/link";
-import { FEATURED_COMPETITIONS } from "@/config/competitions";
+import type { FixtureCompetition } from "@/lib/football";
 
-export function CompetitionFilter({ date, selected }: { date: string; selected?: string }) {
+export function CompetitionFilter({
+  date,
+  competitions,
+  selected,
+  status,
+}: {
+  date: string;
+  competitions: FixtureCompetition[];
+  selected?: string;
+  status?: string;
+}) {
+  function href(routeKey?: string) {
+    const params = new URLSearchParams({ date });
+    if (routeKey) params.set("league", routeKey);
+    if (status && status !== "all") params.set("status", status);
+    return `/?${params.toString()}`;
+  }
+
   return (
     <div className="filters" aria-label="Competition filter">
-      <Link className={!selected ? "filterChip active" : "filterChip"} href={`/?date=${date}`}>All</Link>
-      {FEATURED_COMPETITIONS.map((competition) => (
+      <Link className={!selected ? "filterChip active" : "filterChip"} href={href()}>All</Link>
+      {competitions.map((competition) => (
         <Link
-          className={selected === competition.slug ? "filterChip active" : "filterChip"}
-          href={`/?date=${date}&league=${competition.slug}`}
+          className={selected === competition.routeKey ? "filterChip active" : "filterChip"}
+          href={href(competition.routeKey)}
           key={competition.id}
         >
-          {competition.shortName}
+          {competition.name}
         </Link>
       ))}
     </div>

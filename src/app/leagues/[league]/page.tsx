@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { MatchList } from "@/components/MatchList";
 import { SafeLogo } from "@/components/SafeLogo";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getCompetition } from "@/config/competitions";
-import { getLeagueFixtures, getLeagueSnapshot, resolveLeague } from "@/lib/football";
+import { getLeagueFixtures, resolveLeague } from "@/lib/football";
 
 type Props = { params: Promise<{ league: string }> };
 
@@ -16,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${competition.name} Fixtures & Results | Live Sports`,
-    description: `${competition.name} fixtures and results for the current season.`,
+    description: `${competition.name} fixtures and results for season ${competition.season.year}.`,
   };
 }
 
@@ -39,162 +38,46 @@ export default async function LeaguePage({ params }: Props) {
   const competition = await resolveLeague(league);
   if (!competition) notFound();
 
-  const featured = Boolean(getCompetition(league));
-
-  if (!featured) {
-    const fixtures = await getLeagueFixtures(league);
-
-    return (
-      <main>
-        <SiteHeader />
-        <section className="content pageTop">
-          <div className="leagueHero">
-            <SafeLogo src={competition.logo} alt={competition.name} fallbackText={competition.name} size={64} />
-            <div>
-              <p className="eyebrow">{competition.country.name} · {competition.type}</p>
-              <h1 className="pageTitle">{competition.name}</h1>
-              <p className="muted">
-                Season {competition.season.year}. This non-featured competition loads fixtures on demand
-                so browsing the full catalogue does not consume extra API requests.
-              </p>
-            </div>
-          </div>
-
-          <div className="coverageGrid leagueCoverageCompact">
-            {coverageItems(competition.season.coverage).map(([label, available]) => (
-              <span className={available ? "coverageChip available" : "coverageChip"} key={label}>
-                <span aria-hidden="true">{available ? "✓" : "–"}</span>
-                {label}
-              </span>
-            ))}
-          </div>
-
-          <div className="sectionHeading">
-            <div>
-              <p className="eyebrow">FIXTURES</p>
-              <h2>Recent & upcoming</h2>
-            </div>
-            <div className="cardActions leaguePageActions">
-              {competition.season.coverage.standings ? (
-                <Link href={`/standings/${league}`}>Standings</Link>
-              ) : null}
-              <Link href="/leagues">All leagues</Link>
-            </div>
-          </div>
-
-          <MatchList fixtures={fixtures} />
-        </section>
-      </main>
-    );
-  }
-
-  const snapshot = await getLeagueSnapshot(league);
-  if (!snapshot) notFound();
-
-  const coverage = snapshot.metadata?.season.coverage;
+  const fixtures = await getLeagueFixtures(league);
 
   return (
     <main>
       <SiteHeader />
       <section className="content pageTop">
         <div className="leagueHero">
-          <SafeLogo
-            src={snapshot.metadata?.logo}
-            alt={competition.name}
-            fallbackText={competition.name}
-            size={64}
-          />
+          <SafeLogo src={competition.logo} alt={competition.name} fallbackText={competition.name} size={64} />
           <div>
-            <p className="eyebrow">{competition.country.name}</p>
+            <p className="eyebrow">{competition.country.name} · {competition.type}</p>
             <h1 className="pageTitle">{competition.name}</h1>
             <p className="muted">
-              Season {snapshot.season}. League metadata and team lists are cached daily;
-              standings and the fixture window are cached for 12 hours.
+              Season {competition.season.year}. Competition identity, season and coverage are supplied by API-Football.
             </p>
           </div>
         </div>
 
-        <div className="leagueSnapshotStats">
-          <div><strong>{snapshot.teams.length}</strong><span>Teams</span></div>
-          <div><strong>{snapshot.standings.length}</strong><span>Table rows</span></div>
-          <div><strong>{snapshot.fixtures.length}</strong><span>Fixture window</span></div>
-          <div><strong>{snapshot.metadata?.season.current ? "Current" : snapshot.season}</strong><span>Season</span></div>
+        <div className="coverageGrid leagueCoverageCompact">
+          {coverageItems(competition.season.coverage).map(([label, available]) => (
+            <span className={available ? "coverageChip available" : "coverageChip"} key={label}>
+              <span aria-hidden="true">{available ? "✓" : "–"}</span>
+              {label}
+            </span>
+          ))}
         </div>
 
-        {coverage ? (
-          <section className="leagueDataSection">
-            <div className="sectionHeading compactScoreHeading">
-              <div>
-                <p className="eyebrow">API-FOOTBALL COVERAGE</p>
-                <h2>Available league data</h2>
-              </div>
-            </div>
-            <div className="coverageGrid">
-              {coverageItems(coverage).map(([label, available]) => (
-                <span className={available ? "coverageChip available" : "coverageChip"} key={label}>
-                  <span aria-hidden="true">{available ? "✓" : "–"}</span>
-                  {label}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="leagueDataSection">
-          <div className="sectionHeading compactScoreHeading">
-            <div>
-              <p className="eyebrow">CURRENT SEASON</p>
-              <h2>Teams</h2>
-            </div>
-            <span className="badge">{snapshot.teams.length}</span>
+        <div className="sectionHeading">
+          <div>
+            <p className="eyebrow">FIXTURES</p>
+            <h2>Recent & upcoming</h2>
           </div>
-
-          <div className="leagueTeamsGrid">
-            {snapshot.teams.map((team) => (
-              <Link
-                className="leagueTeamCard"
-                href={`/teams/${team.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
-                key={team.id}
-                prefetch={false}
-              >
-                <SafeLogo src={team.logo} alt={team.name} fallbackText={team.name} size={34} />
-                <span>{team.name}</span>
-              </Link>
-            ))}
+          <div className="cardActions leaguePageActions">
+            {competition.season.coverage.standings ? (
+              <Link href={`/standings/${competition.routeKey}`}>Standings</Link>
+            ) : null}
+            <Link href="/leagues">All leagues</Link>
           </div>
-        </section>
+        </div>
 
-        <section className="leagueDataSection">
-          <div className="sectionHeading compactScoreHeading">
-            <div>
-              <p className="eyebrow">TABLE</p>
-              <h2>Top standings</h2>
-            </div>
-            <Link className="button" href={`/standings/${league}`}>Full standings</Link>
-          </div>
-
-          <div className="miniStandings">
-            {snapshot.standings.slice(0, 6).map((row) => (
-              <div className="miniStandingRow" key={row.team.id}>
-                <strong>{row.rank}</strong>
-                <SafeLogo src={row.team.logo} alt={row.team.name} fallbackText={row.team.name} size={24} />
-                <span>{row.team.name}</span>
-                <b>{row.points} pts</b>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="leagueDataSection">
-          <div className="sectionHeading">
-            <div>
-              <p className="eyebrow">FIXTURES</p>
-              <h2>Recent & upcoming</h2>
-            </div>
-            <span className="badge">{snapshot.fixtures.length} matches</span>
-          </div>
-          <MatchList fixtures={snapshot.fixtures} />
-        </section>
+        <MatchList fixtures={fixtures} />
       </section>
     </main>
   );

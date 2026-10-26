@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCompetition } from "@/config/competitions";
-import { getLeagueSnapshot } from "@/lib/football";
+import { getLeagueSnapshot, resolveLeague } from "@/lib/football";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +14,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   const { league } = await params;
-  if (!getCompetition(league)) {
-    return NextResponse.json({ ok: false, error: "Unknown featured league" }, { status: 404 });
+  const competition = await resolveLeague(league);
+  if (!competition) {
+    return NextResponse.json({ ok: false, error: "Unknown API-Football competition" }, { status: 404 });
   }
 
-  const snapshot = await getLeagueSnapshot(league);
+  const snapshot = await getLeagueSnapshot(competition.routeKey);
   if (!snapshot) {
     return NextResponse.json({ ok: false, error: "League snapshot unavailable" }, { status: 404 });
   }

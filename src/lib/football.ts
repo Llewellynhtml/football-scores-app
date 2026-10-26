@@ -1,4 +1,3 @@
-import { currentFootballSeason, getCompetition } from "@/config/competitions";
 import { dateInSouthAfrica, shiftDate } from "@/lib/dates";
 import { recordProviderResponse } from "@/lib/api-usage";
 import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
@@ -15,6 +14,15 @@ export type Fixture = {
   league: { id: number; name: string; country: string; logo: string; season: number };
   home: { id: number; name: string; logo: string; goals: number | null };
   away: { id: number; name: string; logo: string; goals: number | null };
+};
+
+export type FixtureCompetition = {
+  id: number;
+  name: string;
+  country: string;
+  logo: string;
+  season: number;
+  routeKey: string;
 };
 
 export type StandingRow = {
@@ -93,7 +101,7 @@ export type LeagueDataSnapshot = {
   slug: string;
   season: number;
   generatedAt: string;
-  metadata: LeagueMetadata | null;
+  metadata: LeagueMetadata;
   teams: TeamProfile[];
   standings: StandingRow[];
   fixtures: Fixture[];
@@ -179,6 +187,7 @@ type ApiResponse<T> = {
 };
 
 const BASE_URL = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
+const TIMEZONE = process.env.FOOTBALL_TIMEZONE ?? "Africa/Johannesburg";
 
 function hasApiErrors(errors: unknown) {
   if (!errors) return false;
@@ -217,10 +226,7 @@ async function apiGet<T>(
     throw new Error(`API-Football returned an error for ${pathname}`);
   }
 
-  if (typeof data.results === "number" && data.results === 0) {
-    return [];
-  }
-
+  if (typeof data.results === "number" && data.results === 0) return [];
   return Array.isArray(data.response) ? data.response : [];
 }
 
@@ -262,14 +268,13 @@ function mapTeam(item: ApiTeam): TeamProfile | null {
   return { ...item.team, venue: item.venue ?? null };
 }
 
-function mapLeague(item: ApiLeagueEnvelope, season: number): LeagueCatalogItem | null {
+function mapLeague(item: ApiLeagueEnvelope): LeagueCatalogItem | null {
   if (!validPositiveId(item?.league?.id) || !validName(item?.league?.name)) return null;
 
-  const seasonInfo = item.seasons?.find((entry) => entry.year === season)
-    ?? item.seasons?.find((entry) => entry.current)
-    ?? item.seasons?.[0];
+  const season = item.seasons?.find((entry) => entry.current)
+    ?? item.seasons?.slice().sort((a, b) => b.year - a.year)[0];
 
-  if (!seasonInfo) return null;
+  if (!season) return null;
 
   return {
     id: item.league.id,
@@ -277,52 +282,37 @@ function mapLeague(item: ApiLeagueEnvelope, season: number): LeagueCatalogItem |
     type: item.league.type,
     logo: item.league.logo,
     country: item.country,
-    season: seasonInfo,
+    season,
     routeKey: `${slugify(item.league.name)}-${item.league.id}`,
   };
 }
 
-function fallbackFeaturedLeague(slug: string): LeagueCatalogItem | null {
-  const competition = getCompetition(slug);
-  if (!competition) return null;
+export function competitionsFromFixtures(fixtures: Fixture[]): FixtureCompetition[] {
+  const map = new Map<number, FixtureCompetition>();
 
-  const season = currentFootballSeason();
-  return {
-    id: competition.id,
-    name: competition.name,
-    type: "League",
-    logo: `https://media.api-sports.io/football/leagues/${competition.id}.png`,
-    country: { name: competition.country, code: null, flag: null },
-    season: {
-      year: season,
-      start: null,
-      end: null,
-      current: true,
-      coverage: {
-        fixtures: {
-          events: false,
-          lineups: false,
-          statistics_fixtures: false,
-          statistics_players: false,
-        },
-        standings: true,
-        players: false,
-        top_scorers: false,
-        top_assists: false,
-        top_cards: false,
-        injuries: false,
-        predictions: false,
-        odds: false,
-      },
-    },
-    routeKey: slug,
-  };
+  for (const fixture of fixtures) {
+    if (!map.has(fixture.league.id)) {
+      map.set(fixture.league.id, {
+        id: fixture.league.id,
+        name: fixture.league.name,
+        country: fixture.league.country,
+        logo: fixture.league.logo,
+        season: fixture.league.season,
+        routeKey: `${slugify(fixture.league.name)}-${fixture.league.id}`,
+      });
+    }
+  }
+
+  return [...map.values()].sort((a, b) => {
+    const country = a.country.localeCompare(b.country);
+    return country !== 0 ? country : a.name.localeCompare(b.name);
+  });
 }
 
 export async function getFixturesByDate(date: string): Promise<Fixture[]> {
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
-    { date, timezone: "Africa/Johannesburg" },
+    { date, timezone: TIMEZONE },
     1800,
   );
   return validFixtures(data);
@@ -334,15 +324,14 @@ export async function getFixtureById(id: number): Promise<Fixture | null> {
 }
 
 export async function getFootballLeagueCatalog(): Promise<LeagueCatalogItem[]> {
-  const season = currentFootballSeason();
   const data = await apiGet<ApiLeagueEnvelope>(
     "/leagues",
-    { season },
+    { current: "true" },
     86400,
   );
 
   return data
-    .map((item) => mapLeague(item, season))
+    .map(mapLeague)
     .filter((item): item is LeagueCatalogItem => item !== null)
     .sort((a, b) => {
       const country = a.country.name.localeCompare(b.country.name);
@@ -351,20 +340,19 @@ export async function getFootballLeagueCatalog(): Promise<LeagueCatalogItem[]> {
 }
 
 export async function resolveLeague(routeKey: string): Promise<LeagueCatalogItem | null> {
-  const featured = getCompetition(routeKey);
   const catalog = await getFootballLeagueCatalog();
 
-  if (featured) {
-    return catalog.find((item) => item.id === featured.id)
-      ? { ...catalog.find((item) => item.id === featured.id)!, routeKey }
-      : fallbackFeaturedLeague(routeKey);
+  const exact = catalog.find((item) => item.routeKey === routeKey);
+  if (exact) return exact;
+
+  const idMatch = routeKey.match(/-(\d+)$/);
+  if (idMatch) {
+    const id = Number(idMatch[1]);
+    const byId = catalog.find((item) => item.id === id);
+    if (byId) return byId;
   }
 
-  const match = routeKey.match(/-(\d+)$/);
-  const id = match ? Number(match[1]) : null;
-  if (!id) return null;
-
-  return catalog.find((item) => item.id === id) ?? null;
+  return catalog.find((item) => slugify(item.name) === routeKey) ?? null;
 }
 
 export async function getLeagueMetadata(routeKey: string): Promise<LeagueMetadata | null> {
@@ -389,7 +377,7 @@ async function getLeagueFixturesFor(ref: LeagueCatalogItem): Promise<Fixture[]> 
       season: ref.season.year,
       from: shiftDate(today, -14),
       to: shiftDate(today, 30),
-      timezone: "Africa/Johannesburg",
+      timezone: TIMEZONE,
     },
     43200,
   );
@@ -399,9 +387,7 @@ async function getLeagueFixturesFor(ref: LeagueCatalogItem): Promise<Fixture[]> 
 async function getStandingsFor(ref: LeagueCatalogItem): Promise<StandingRow[]> {
   if (!ref.season.coverage.standings) return [];
 
-  const data = await apiGet<{
-    league: { standings: ApiStanding[][] };
-  }>(
+  const data = await apiGet<{ league: { standings: ApiStanding[][] } }>(
     "/standings",
     { league: ref.id, season: ref.season.year },
     43200,
@@ -471,12 +457,7 @@ export async function getTeamBySlug(slug: string): Promise<TeamProfile | null> {
 export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
-    {
-      team: teamId,
-      season: currentFootballSeason(),
-      next: 8,
-      timezone: "Africa/Johannesburg",
-    },
+    { team: teamId, next: 8, timezone: TIMEZONE },
     1800,
   );
   return validFixtures(data);

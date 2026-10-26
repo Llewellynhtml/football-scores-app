@@ -4,9 +4,9 @@ import { FootballSidebar } from "@/components/FootballSidebar";
 import { MatchList } from "@/components/MatchList";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StatusFilter } from "@/components/StatusFilter";
-import { getCompetition } from "@/config/competitions";
 import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
-import { getFixturesByDate, type Fixture } from "@/lib/football";
+import { competitionsFromFixtures, getFixturesByDate, type Fixture } from "@/lib/football";
+import { slugify } from "@/lib/slug";
 
 type PageProps = {
   searchParams: Promise<{ date?: string; league?: string; status?: string }>;
@@ -19,23 +19,30 @@ const SCHEDULED_STATUSES = new Set(["NS", "TBD"]);
 export default async function Home({ searchParams }: PageProps) {
   const query = await searchParams;
   const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
-  const selectedCompetition = query.league ? getCompetition(query.league) : undefined;
   const status = ["live", "finished", "scheduled"].includes(query.status ?? "")
     ? query.status!
     : "all";
 
-  let fixtures: Fixture[] = [];
+  let dayFixtures: Fixture[] = [];
   let apiError = false;
 
   try {
-    fixtures = await getFixturesByDate(date);
+    dayFixtures = await getFixturesByDate(date);
   } catch {
     apiError = true;
   }
 
-  if (selectedCompetition) {
-    fixtures = fixtures.filter((fixture) => fixture.league.id === selectedCompetition.id);
-  }
+  const competitions = competitionsFromFixtures(dayFixtures);
+  const selectedCompetition = query.league
+    ? competitions.find(
+        (competition) =>
+          competition.routeKey === query.league || slugify(competition.name) === query.league,
+      )
+    : undefined;
+
+  let fixtures = selectedCompetition
+    ? dayFixtures.filter((fixture) => fixture.league.id === selectedCompetition.id)
+    : dayFixtures;
 
   if (status === "live") {
     fixtures = fixtures.filter((fixture) => LIVE_STATUSES.has(fixture.status));
@@ -66,9 +73,14 @@ export default async function Home({ searchParams }: PageProps) {
           </section>
 
           <section className="scorePanel">
-            <DateNav date={date} league={selectedCompetition?.slug} status={status} />
-            <StatusFilter date={date} league={selectedCompetition?.slug} selected={status} />
-            <CompetitionFilter date={date} selected={selectedCompetition?.slug} />
+            <DateNav date={date} league={selectedCompetition?.routeKey} status={status} />
+            <StatusFilter date={date} league={selectedCompetition?.routeKey} selected={status} />
+            <CompetitionFilter
+              date={date}
+              competitions={competitions}
+              selected={selectedCompetition?.routeKey}
+              status={status}
+            />
 
             <div className="sectionHeading compactScoreHeading">
               <div>
@@ -78,9 +90,9 @@ export default async function Home({ searchParams }: PageProps) {
               <span className="badge">{fixtures.length} fixtures</span>
             </div>
 
-            {!process.env.API_FOOTBALL_KEY && (
+            {!process.env.API_FOOTBALL_KEY && !process.env.API_SPORTS_KEY && (
               <div className="notice">
-                API integration is ready. Add <code>API_FOOTBALL_KEY</code> in Hostinger environment variables to load football data.
+                API integration is ready. Add the API-Sports key in Hostinger environment variables to load football data.
               </div>
             )}
 

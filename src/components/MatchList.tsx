@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { SafeLogo } from "@/components/SafeLogo";
-import { getCompetitionById } from "@/config/competitions";
 import type { Fixture } from "@/lib/football";
-import { matchUrl, teamUrl } from "@/lib/slug";
+import { matchUrl, slugify, teamUrl } from "@/lib/slug";
 import { timeInSouthAfrica } from "@/lib/dates";
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE"]);
@@ -34,22 +33,20 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
   return (
     <div className="leagueList">
       {Object.entries(grouped).map(([league, matches]) => {
-        const featured = getCompetitionById(matches[0].league.id);
+        const first = matches[0];
+        const routeKey = `${slugify(first.league.name)}-${first.league.id}`;
+
         return (
           <section className="leagueCard" key={league}>
             <div className="leagueTitle">
               <div className="leagueIdentity">
-                <SafeLogo src={matches[0].league.logo} alt={matches[0].league.name} fallbackText={matches[0].league.name} size={24} />
+                <SafeLogo src={first.league.logo} alt={first.league.name} fallbackText={first.league.name} size={24} />
                 <div>
-                  <small>{matches[0].league.country}</small>
-                  <h3>{matches[0].league.name}</h3>
+                  <small>{first.league.country}</small>
+                  <h3>{first.league.name}</h3>
                 </div>
               </div>
-              {featured ? (
-                <Link className="leagueAction" href={`/standings/${featured.slug}`} prefetch={false}>Standings</Link>
-              ) : (
-                <span className="leagueCount">{matches.length}</span>
-              )}
+              <Link className="leagueAction" href={`/leagues/${routeKey}`} prefetch={false}>League</Link>
             </div>
 
             {matches.map((match) => {
