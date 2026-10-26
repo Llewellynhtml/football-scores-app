@@ -56,17 +56,6 @@ function scoreValue(value: unknown): string | null {
   return textValue(item.total, item.points, item.score, item.runs, item.value);
 }
 
-const MEDIA_SEGMENT: Record<string, string> = {
-  basketball: "basketball",
-  nba: "nba",
-  "american-football": "american-football",
-  baseball: "baseball",
-  hockey: "hockey",
-  volleyball: "volleyball",
-  handball: "handball",
-  afl: "afl",
-};
-
 function cleanMediaUrl(value: unknown): string | null {
   const raw = textValue(value);
   if (!raw) return null;
@@ -76,16 +65,6 @@ function cleanMediaUrl(value: unknown): string | null {
   } catch {
     return null;
   }
-}
-
-function derivedTeamLogo(slug: string, id: number | null) {
-  const segment = MEDIA_SEGMENT[slug];
-  return segment && id ? `https://media.api-sports.io/${segment}/teams/${id}.png` : null;
-}
-
-function derivedLeagueLogo(slug: string, id: number | null) {
-  const segment = MEDIA_SEGMENT[slug];
-  return segment && id ? `https://media.api-sports.io/${segment}/leagues/${id}.png` : null;
 }
 
 function getApiKey(slug: string) {
@@ -139,18 +118,11 @@ function teamFrom(slug: string, raw: unknown, side: "home" | "away") {
   );
   if (!name) return null;
 
-  const id = numericValue(
-    path(raw, ["teams", side, "id"]),
-    path(raw, ["teams", visitorSide, "id"]),
-    path(raw, ["team", side, "id"]),
-  );
-
   return {
     name,
     logo: cleanMediaUrl(path(raw, ["teams", side, "logo"]))
       ?? cleanMediaUrl(path(raw, ["teams", visitorSide, "logo"]))
-      ?? cleanMediaUrl(path(raw, ["team", side, "logo"]))
-      ?? derivedTeamLogo(slug, id),
+      ?? cleanMediaUrl(path(raw, ["team", side, "logo"])),
   };
 }
 
@@ -162,7 +134,7 @@ function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
     path(raw, ["status", "short"]),
     path(raw, ["status"]),
     path(raw, ["status", "long"]),
-  ) ?? "TBD";
+  ) ?? "";
 
   const date = textValue(
     path(raw, ["date", "start"]),
@@ -180,7 +152,7 @@ function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
       path(raw, ["league", "name"]),
       path(raw, ["league"]),
       path(raw, ["competition", "name"]),
-    ) ?? "Competition",
+    ) ?? "",
     country: textValue(
       path(raw, ["country", "name"]),
       path(raw, ["league", "country", "name"]),
@@ -188,8 +160,7 @@ function normalizeMatch(slug: string, raw: unknown): UnifiedSportEvent {
       path(raw, ["country"]),
     ),
     logo: cleanMediaUrl(path(raw, ["league", "logo"]))
-      ?? cleanMediaUrl(path(raw, ["competition", "logo"]))
-      ?? derivedLeagueLogo(slug, numericValue(path(raw, ["league", "id"]), path(raw, ["competition", "id"]))),
+      ?? cleanMediaUrl(path(raw, ["competition", "logo"])),
     home,
     away,
     homeScore: scoreValue(path(raw, ["scores", "home"]))
@@ -216,7 +187,7 @@ function normalizeMma(raw: unknown): UnifiedSportEvent {
     path(raw, ["fighters", "b", "name"]),
     path(raw, ["fighter", "second", "name"]),
   );
-  const status = textValue(path(raw, ["status", "short"]), path(raw, ["status"])) ?? "TBD";
+  const status = textValue(path(raw, ["status", "short"]), path(raw, ["status"])) ?? "";
 
   return {
     id: textValue(path(raw, ["id"])) ?? "",
@@ -229,7 +200,7 @@ function normalizeMma(raw: unknown): UnifiedSportEvent {
       path(raw, ["league", "name"]),
       path(raw, ["competition", "name"]),
       path(raw, ["category"]),
-    ) ?? "MMA",
+    ) ?? "",
     country: textValue(path(raw, ["country", "name"]), path(raw, ["country"])),
     logo: null,
     home: homeName ? { name: homeName, logo: cleanMediaUrl(path(raw, ["fighters", "first", "logo"])) } : null,
@@ -248,12 +219,12 @@ function normalizeRace(raw: unknown): UnifiedSportEvent {
     sport: "formula-1",
     date,
     time: textValue(path(raw, ["time"])),
-    status: textValue(path(raw, ["status"])) ?? "Scheduled",
-    statusLong: textValue(path(raw, ["status"])) ?? "Scheduled",
+    status: textValue(path(raw, ["status"])) ?? "",
+    statusLong: textValue(path(raw, ["status"])) ?? "",
     competition: textValue(
       path(raw, ["competition", "name"]),
       path(raw, ["season"]),
-    ) ?? "Formula 1",
+    ) ?? "",
     country: textValue(
       path(raw, ["circuit", "location", "country"]),
       path(raw, ["competition", "location", "country"]),
@@ -269,7 +240,7 @@ function normalizeRace(raw: unknown): UnifiedSportEvent {
       path(raw, ["type"]),
       path(raw, ["name"]),
       path(raw, ["circuit", "name"]),
-    ) ?? "Formula 1 race",
+    ),
     subtitle: textValue(path(raw, ["circuit", "name"]), path(raw, ["type"])),
   };
 }
