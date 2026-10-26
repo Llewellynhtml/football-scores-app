@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const siteUrl = process.env.SITE_URL ?? "https://plum-trout-603701.hostingersite.com";
+const siteUrl = process.env.SITE_URL ?? "https://palegoldenrod-clam-775783.hostingersite.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Football Scores",
+    default: "Live Sports",
     template: "%s",
   },
-  description: "Fixtures, results, standings and football match data.",
+  description: "Live scores, fixtures, results, standings and sports data. Football is the first active sport module.",
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
-    title: "Football Scores",
-    description: "Fixtures, results, standings and football match data.",
+    title: "Live Sports",
+    description: "A multi-sport scores and statistics platform.",
     url: siteUrl,
   },
 };

@@ -1,26 +1,62 @@
-# Football Scores App
+# Live Sports App
 
-Private Next.js + TypeScript football portal prepared for Hostinger Node.js hosting.
+A private Next.js + TypeScript multi-sport scores platform deployed on Hostinger. Football is the first active sport module; the architecture now registers the additional API-Sports products visible in the user's dashboard without consuming their quotas until each provider is explicitly implemented.
 
-## Implemented
+## Live architecture
 
-- Yesterday / Today / Tomorrow date navigation
+```
+Next.js platform
+├── shared sports registry
+├── shared navigation / SEO shell
+├── Football provider (LIVE)
+├── Basketball (registered)
+├── NBA (registered)
+├── American Football / NFL (registered)
+├── Rugby (registered)
+├── Formula 1 (registered)
+├── Baseball (registered)
+├── Hockey (registered)
+├── MMA (registered)
+├── Volleyball (registered)
+├── Handball (registered)
+└── AFL (registered)
+```
+
+"Registered" means the sport has a route, environment-variable contract and provider slot. It does not make API calls yet.
+
+## Current football product
+
+- Yesterday / Today / Tomorrow navigation
 - Competition filters
-- Featured EPL, Champions League, La Liga and South African PSL configuration
+- EPL, Champions League, La Liga and South African PSL
 - Match detail pages
-- League fixture pages
-- League standings
+- League fixtures
+- Standings
 - Team pages
 - SEO-friendly slugs
-- API-Football server-side integration
-- Cached provider requests
-- API usage/rate-limit snapshot endpoint
-- Health endpoint
-- Protected cron cache-warming endpoint
-- GitHub Actions build validation
-- No API key committed to GitHub
+- Cached API-Football requests
+- API usage diagnostics
+- Protected Hostinger cron cache warming
 
-## Main routes
+## Multi-sport routes
+
+- `/sports` — all registered sports
+- `/sports/basketball`
+- `/sports/nba`
+- `/sports/american-football`
+- `/sports/rugby`
+- `/sports/formula-1`
+- `/sports/baseball`
+- `/sports/hockey`
+- `/sports/mma`
+- `/sports/volleyball`
+- `/sports/handball`
+- `/sports/afl`
+- `/api/sports` — safe configuration/status view
+
+Football remains live at `/` and `/football` redirects there so existing URLs do not break.
+
+## Football routes
 
 - `/`
 - `/leagues/premier-league`
@@ -32,56 +68,28 @@ Private Next.js + TypeScript football portal prepared for Hostinger Node.js host
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` for local development.
-
-Required in Hostinger:
+The live deployment currently requires:
 
 ```
 API_FOOTBALL_KEY=your_real_key
-CRON_SECRET=a_long_random_secret
-SITE_URL=https://plum-trout-603701.hostingersite.com
-```
-
-Optional:
-
-```
-FOOTBALL_SEASON=2026
 API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+FOOTBALL_SEASON=2026
+CRON_SECRET=a_long_random_secret
+SITE_URL=https://palegoldenrod-clam-775783.hostingersite.com
 CRON_MODE=fixtures
 ```
 
-Never commit the real API key or cron secret.
+The repository's `.env.example` contains reserved variables for the other sports. Do not add those API keys to Hostinger until we actually implement and test the corresponding provider, otherwise it becomes difficult to distinguish "configured" from "production ready."
 
-## Local development
+Never commit real API keys or cron secrets.
 
-```
-npm install
-npm run dev
-```
-
-## Hostinger build
+## Hostinger
 
 - Node.js: 22.x
 - Build command: `npm run build`
 - Start command: `npm start`
+- Output: Next.js `.next`
 
-## Cron warming
+## Quota strategy
 
-The protected route supports:
-
-- `mode=fixtures` — warms today's fixture cache with one fixture query
-- `mode=standings` — warms the four featured league tables
-
-The included script can be run by Hostinger cron:
-
-```
-npm run cron:warm
-```
-
-Use the fixtures job conservatively on the free API-Football plan. Run standings much less frequently because one standings warm-up can require four provider requests.
-
-Hostinger cron schedules use UTC, so convert your desired South African time to UTC when scheduling.
-
-## API quota protection
-
-The application reduces provider calls through Next.js server caching. `/api/usage` exposes the latest provider limit/remaining headers seen by the current Node.js process plus a process-local outbound call count. This is useful for diagnostics but is not yet a persistent multi-process billing ledger; a database-backed quota ledger can be added before higher traffic.
+Only Football consumes API-Sports quota today. Additional sports are navigation/architecture placeholders and make zero provider calls. Each new sport should receive its own cache policy, cron budget and usage tracking before activation.
