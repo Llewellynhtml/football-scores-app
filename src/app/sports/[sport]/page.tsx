@@ -53,7 +53,7 @@ export default async function SportPage({ params }: Props) {
             <p>{prettyDate(date)} · South Africa time</p>
           </div>
           <div className="scoreboardMetric">
-            <span>{events.length}</span>
+            <span>{apiError ? "—" : events.length}</span>
             <small>events</small>
           </div>
         </section>
@@ -65,27 +65,31 @@ export default async function SportPage({ params }: Props) {
             </div>
           )}
 
-          {apiError && (
+          {apiError ? (
             <div className="notice error">
-              {sport.name} data could not be loaded from API-Sports right now.
+              API-Sports could not return {sport.name} data right now. This is usually caused by a temporary rate limit, daily quota, or provider availability issue.
             </div>
-          )}
+          ) : null}
 
-          {diagnostics.rejected > 0 && (
+          {!apiError && diagnostics.rejected > 0 && (
             <div className="notice validationNotice">
               {diagnostics.rejected} malformed API record{diagnostics.rejected === 1 ? "" : "s"} were safely skipped.
             </div>
           )}
 
-          <div className="sectionHeading compactScoreHeading">
-            <div>
-              <p className="eyebrow">LIVE DATA</p>
-              <h2>{prettyDate(date)}</h2>
-            </div>
-            <span className="badge">15 min free-tier cache</span>
-          </div>
+          {!apiError ? (
+            <>
+              <div className="sectionHeading compactScoreHeading">
+                <div>
+                  <p className="eyebrow">LIVE DATA</p>
+                  <h2>{prettyDate(date)}</h2>
+                </div>
+                <span className="badge">15 min free-tier cache</span>
+              </div>
 
-          <GenericEventList events={events} icon={sport.icon} />
+              <GenericEventList events={events} icon={sport.icon} />
+            </>
+          ) : null}
         </section>
       </div>
     </main>
