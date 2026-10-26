@@ -23,12 +23,13 @@ export default async function Home({ searchParams }: PageProps) {
     : "all";
 
   let dayFixtures: Fixture[] = [];
-  let apiError = false;
+  let apiError: string | null = null;
 
   try {
     dayFixtures = await getFixturesByDate(date);
-  } catch {
-    apiError = true;
+  } catch (error) {
+    apiError = error instanceof Error ? error.message : "Football data request failed";
+    console.error("Unable to load football fixtures", error);
   }
 
   const competitions = competitionsFromFixtures(dayFixtures);
@@ -66,40 +67,40 @@ export default async function Home({ searchParams }: PageProps) {
               <p>{prettyDate(date)} · South Africa time</p>
             </div>
             <div className="scoreboardMetric">
-              <span>{fixtures.length}</span>
+              <span>{apiError ? "—" : fixtures.length}</span>
               <small>matches</small>
             </div>
           </section>
 
           <section className="scorePanel">
-            <StatusFilter league={selectedCompetition?.routeKey} selected={status} />
-            <CompetitionFilter
-              competitions={competitions}
-              selected={selectedCompetition?.routeKey}
-              status={status}
-            />
-
-            <div className="sectionHeading compactScoreHeading">
-              <div>
-                {selectedCompetition?.country ? <p className="eyebrow">{selectedCompetition.country}</p> : null}
-                <h2>{selectedCompetition?.name ?? "All competitions"}</h2>
-              </div>
-              <span className="badge">{fixtures.length} fixtures</span>
-            </div>
-
-            {!process.env.API_FOOTBALL_KEY && !process.env.API_SPORTS_KEY && (
+            {!process.env.API_FOOTBALL_KEY && !process.env.API_SPORTS_KEY ? (
               <div className="notice">
                 API integration is ready. Add the API-Sports key in Hostinger environment variables to load football data.
               </div>
-            )}
-
-            {apiError && (
+            ) : apiError ? (
               <div className="notice error">
-                Football data could not be loaded right now. The application itself is still online.
+                API-Football could not return the current fixture data. This is usually caused by a temporary rate limit, daily quota, or provider availability issue.
               </div>
-            )}
+            ) : (
+              <>
+                <StatusFilter league={selectedCompetition?.routeKey} selected={status} />
+                <CompetitionFilter
+                  competitions={competitions}
+                  selected={selectedCompetition?.routeKey}
+                  status={status}
+                />
 
-            <MatchList fixtures={fixtures} />
+                <div className="sectionHeading compactScoreHeading">
+                  <div>
+                    {selectedCompetition?.country ? <p className="eyebrow">{selectedCompetition.country}</p> : null}
+                    <h2>{selectedCompetition?.name ?? "All competitions"}</h2>
+                  </div>
+                  <span className="badge">{fixtures.length} fixtures</span>
+                </div>
+
+                <MatchList fixtures={fixtures} />
+              </>
+            )}
           </section>
         </div>
       </div>
