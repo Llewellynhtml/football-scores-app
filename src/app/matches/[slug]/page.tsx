@@ -14,13 +14,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = fixtureIdFromSlug(slug);
   if (!id) return { title: "Match not found" };
 
-  const match = await getFixtureById(id);
-  if (!match) return { title: "Match not found" };
+  try {
+    const match = await getFixtureById(id);
+    if (!match) return { title: "Match not found" };
 
-  return {
-    title: `${match.home.name} vs ${match.away.name} | Football Scores`,
-    description: `${match.home.name} vs ${match.away.name} in ${match.league.name}.`,
-  };
+    return {
+      title: `${match.home.name} vs ${match.away.name} | Football Scores`,
+      description: `${match.home.name} vs ${match.away.name} in ${match.league.name}.`,
+    };
+  } catch (error) {
+    console.error("Match metadata API error", { id, error });
+    return {
+      title: "Football match | Live Sports",
+      description: "Football match details.",
+    };
+  }
 }
 
 export default async function MatchPage({ params }: Props) {
@@ -28,8 +36,31 @@ export default async function MatchPage({ params }: Props) {
   const id = fixtureIdFromSlug(slug);
   if (!id) notFound();
 
-  const match = await getFixtureById(id);
-  if (!match) notFound();
+  let match: Awaited<ReturnType<typeof getFixtureById>> = null;
+  let apiError = false;
+
+  try {
+    match = await getFixtureById(id);
+  } catch (error) {
+    apiError = true;
+    console.error("Unable to load API-Football match", { id, error });
+  }
+
+  if (!match && !apiError) notFound();
+
+  if (!match) {
+    return (
+      <main>
+        <SiteHeader />
+        <section className="content pageTop">
+          <div className="notice error">
+            Match data could not be loaded from API-Football right now. Please try again later.
+          </div>
+          <Link className="button secondary" href="/">Back to scores</Link>
+        </section>
+      </main>
+    );
+  }
 
   const date = match.date.slice(0, 10);
 
