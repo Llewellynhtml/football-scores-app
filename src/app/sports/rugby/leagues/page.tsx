@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getRugbyLeagues, rugbyConfigured } from "@/sports/rugby/provider";
+import type { RugbyLeague } from "@/sports/rugby/types";
 
 export const metadata = {
   title: "Rugby Competitions | Live Sports",
@@ -9,7 +10,7 @@ export const metadata = {
 };
 
 export default async function RugbyLeaguesPage() {
-  let leagues = [];
+  let leagues: RugbyLeague[] = [];
   let apiError = false;
 
   try {

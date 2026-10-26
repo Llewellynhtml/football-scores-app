@@ -4,6 +4,7 @@ import { RugbyGameList } from "@/components/RugbyGameList";
 import { SiteHeader } from "@/components/SiteHeader";
 import { dateInSouthAfrica, isISODate, prettyDate } from "@/lib/dates";
 import { getRugbyGamesByDate, rugbyConfigured } from "@/sports/rugby/provider";
+import type { RugbyGame } from "@/sports/rugby/types";
 
 type Props = {
   searchParams: Promise<{ date?: string }>;
@@ -18,7 +19,7 @@ export default async function RugbyPage({ searchParams }: Props) {
   const query = await searchParams;
   const date = isISODate(query.date) ? query.date : dateInSouthAfrica();
 
-  let games = [];
+  let games: RugbyGame[] = [];
   let apiError = false;
 
   try {
