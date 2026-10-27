@@ -9,11 +9,23 @@ export type Fixture = {
   status: string;
   statusLong: string;
   elapsed: number | null;
+  extra: number | null;
+  timezone: string | null;
+  timestamp: number | null;
+  periods: { first: number | null; second: number | null };
   referee: string | null;
   venue: { name: string | null; city: string | null };
-  league: { id: number; name: string; country: string; logo: string; season: number };
-  home: { id: number; name: string; logo: string; goals: number | null };
-  away: { id: number; name: string; logo: string; goals: number | null };
+  league: {
+    id: number;
+    name: string;
+    country: string;
+    logo: string;
+    flag: string | null;
+    season: number;
+    round: string | null;
+  };
+  home: { id: number; name: string; logo: string; winner: boolean | null; goals: number | null };
+  away: { id: number; name: string; logo: string; winner: boolean | null; goals: number | null };
 };
 
 export type FixtureCompetition = {
@@ -112,13 +124,24 @@ type ApiFootballFixture = {
     id: number;
     date: string;
     referee: string | null;
-    status: { long: string; short: string; elapsed: number | null };
+    timezone: string | null;
+    timestamp: number | null;
+    periods: { first: number | null; second: number | null };
+    status: { long: string; short: string; elapsed: number | null; extra: number | null };
     venue: { name: string | null; city: string | null };
   };
-  league: { id: number; name: string; country: string; logo: string; season: number };
+  league: {
+    id: number;
+    name: string;
+    country: string;
+    logo: string;
+    flag: string | null;
+    season: number;
+    round: string | null;
+  };
   teams: {
-    home: { id: number; name: string; logo: string };
-    away: { id: number; name: string; logo: string };
+    home: { id: number; name: string; logo: string; winner: boolean | null };
+    away: { id: number; name: string; logo: string; winner: boolean | null };
   };
   goals: { home: number | null; away: number | null };
 };
@@ -251,11 +274,22 @@ function mapFixture(item: ApiFootballFixture): Fixture | null {
     status: item.fixture.status.short,
     statusLong: item.fixture.status.long,
     elapsed: item.fixture.status.elapsed,
+    extra: item.fixture.status.extra ?? null,
+    timezone: item.fixture.timezone ?? null,
+    timestamp: item.fixture.timestamp ?? null,
+    periods: {
+      first: item.fixture.periods?.first ?? null,
+      second: item.fixture.periods?.second ?? null,
+    },
     referee: item.fixture.referee,
     venue: item.fixture.venue,
-    league: item.league,
-    home: { ...item.teams.home, goals: item.goals.home },
-    away: { ...item.teams.away, goals: item.goals.away },
+    league: {
+      ...item.league,
+      flag: item.league.flag ?? null,
+      round: item.league.round ?? null,
+    },
+    home: { ...item.teams.home, winner: item.teams.home.winner ?? null, goals: item.goals.home },
+    away: { ...item.teams.away, winner: item.teams.away.winner ?? null, goals: item.goals.away },
   };
 }
 
