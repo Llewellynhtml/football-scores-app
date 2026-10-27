@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { SafeLogo } from "@/components/SafeLogo";
 import { MatchCentreDetails } from "@/components/MatchCentreDetails";
+import { LocalDateTime, LocalTimezoneLabel } from "@/components/LocalDateTime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { prettyDate, timeInSouthAfrica } from "@/lib/dates";
 import { getFixtureById } from "@/lib/football";
 import { fixtureIdFromSlug, teamUrl } from "@/lib/slug";
 
@@ -63,13 +63,6 @@ export default async function MatchPage({ params }: Props) {
     );
   }
 
-  const date = match.date.slice(0, 10);
-  const firstPeriod = match.periods.first
-    ? timeInSouthAfrica(new Date(match.periods.first * 1000).toISOString())
-    : "—";
-  const secondPeriod = match.periods.second
-    ? timeInSouthAfrica(new Date(match.periods.second * 1000).toISOString())
-    : "—";
   const scoreParts = [
     { label: "Half-time", short: "HT", score: match.scoreBreakdown.halftime },
     { label: "Full-time", short: "FT", score: match.scoreBreakdown.fulltime },
@@ -127,18 +120,19 @@ export default async function MatchPage({ params }: Props) {
         </section>
 
         <div className="matchFacts">
-          <div><span>Date</span><strong>{prettyDate(date)}</strong></div>
-          <div><span>Kick-off</span><strong>{timeInSouthAfrica(match.date)}</strong></div>
+          <div><span>Date</span><strong><LocalDateTime value={match.date} mode="date" /></strong></div>
+          <div><span>Kick-off</span><strong><LocalDateTime value={match.date} mode="time" /></strong></div>
           <div><span>Venue</span><strong>{match.venue.name ?? "—"}</strong></div>
           <div><span>City</span><strong>{match.venue.city ?? "—"}</strong></div>
           <div><span>Referee</span><strong>{match.referee ?? "—"}</strong></div>
           <div><span>Season</span><strong>{match.league.season}</strong></div>
           <div><span>Round</span><strong>{match.league.round ?? "—"}</strong></div>
           <div><span>Added time</span><strong>{match.extra ? `${match.extra} min` : "—"}</strong></div>
-          <div><span>Timezone</span><strong>{match.timezone ?? "—"}</strong></div>
+          <div><span>Your timezone</span><strong><LocalTimezoneLabel /></strong></div>
+          <div><span>Source timezone</span><strong>{match.timezone ?? "UTC"}</strong></div>
           <div><span>Timestamp</span><strong>{match.timestamp ?? "—"}</strong></div>
-          <div><span>First period</span><strong>{firstPeriod}</strong></div>
-          <div><span>Second period</span><strong>{secondPeriod}</strong></div>
+          <div><span>First period</span><strong>{match.periods.first ? <LocalDateTime value={match.periods.first} mode="time" /> : "—"}</strong></div>
+          <div><span>Second period</span><strong>{match.periods.second ? <LocalDateTime value={match.periods.second} mode="time" /> : "—"}</strong></div>
         </div>
 
         <MatchCentreDetails fixture={match} />
