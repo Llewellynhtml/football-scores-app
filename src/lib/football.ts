@@ -3,6 +3,70 @@ import { recordProviderResponse } from "@/lib/api-usage";
 import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
 import { slugify } from "@/lib/slug";
 
+export type FixtureEvent = {
+  time: { elapsed: number | null; extra: number | null };
+  team: { id: number | null; name: string | null; logo: string | null };
+  player: { id: number | null; name: string | null };
+  assist: { id: number | null; name: string | null };
+  type: string | null;
+  detail: string | null;
+  comments: string | null;
+};
+
+export type FixtureLineupPlayer = {
+  id: number | null;
+  name: string | null;
+  number: number | null;
+  pos: string | null;
+  grid: string | null;
+};
+
+export type FixtureLineup = {
+  team: { id: number | null; name: string | null; logo: string | null };
+  formation: string | null;
+  coach: { id: number | null; name: string | null; photo: string | null };
+  startXI: FixtureLineupPlayer[];
+  substitutes: FixtureLineupPlayer[];
+};
+
+export type FixtureTeamStatistics = {
+  team: { id: number | null; name: string | null; logo: string | null };
+  statistics: Array<{ type: string; value: string | number | null }>;
+};
+
+export type FixturePlayerPerformance = {
+  player: { id: number | null; name: string | null; photo: string | null };
+  games: {
+    minutes: number | null;
+    number: number | null;
+    position: string | null;
+    rating: string | null;
+    captain: boolean | null;
+    substitute: boolean | null;
+  };
+  offsides: number | null;
+  shots: { total: number | null; on: number | null };
+  goals: { total: number | null; conceded: number | null; assists: number | null; saves: number | null };
+  passes: { total: number | null; key: number | null; accuracy: string | number | null };
+  tackles: { total: number | null; blocks: number | null; interceptions: number | null };
+  duels: { total: number | null; won: number | null };
+  dribbles: { attempts: number | null; success: number | null; past: number | null };
+  fouls: { drawn: number | null; committed: number | null };
+  cards: { yellow: number | null; red: number | null };
+  penalty: {
+    won: number | null;
+    committed: number | null;
+    scored: number | null;
+    missed: number | null;
+    saved: number | null;
+  };
+};
+
+export type FixturePlayerStatistics = {
+  team: { id: number | null; name: string | null; logo: string | null };
+  players: FixturePlayerPerformance[];
+};
+
 export type Fixture = {
   id: number;
   date: string;
@@ -32,6 +96,10 @@ export type Fixture = {
     extratime: { home: number | null; away: number | null };
     penalty: { home: number | null; away: number | null };
   };
+  events: FixtureEvent[];
+  lineups: FixtureLineup[];
+  statistics: FixtureTeamStatistics[];
+  players: FixturePlayerStatistics[];
 };
 
 export type FixtureCompetition = {
@@ -156,6 +224,58 @@ type ApiFootballFixture = {
     extratime: { home: number | null; away: number | null };
     penalty: { home: number | null; away: number | null };
   };
+  events?: Array<{
+    time?: { elapsed?: number | null; extra?: number | null };
+    team?: { id?: number | null; name?: string | null; logo?: string | null };
+    player?: { id?: number | null; name?: string | null };
+    assist?: { id?: number | null; name?: string | null };
+    type?: string | null;
+    detail?: string | null;
+    comments?: string | null;
+  }>;
+  lineups?: Array<{
+    team?: { id?: number | null; name?: string | null; logo?: string | null };
+    formation?: string | null;
+    coach?: { id?: number | null; name?: string | null; photo?: string | null };
+    startXI?: Array<{ player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }>;
+    substitutes?: Array<{ player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }>;
+  }>;
+  statistics?: Array<{
+    team?: { id?: number | null; name?: string | null; logo?: string | null };
+    statistics?: Array<{ type?: string | null; value?: string | number | null }>;
+  }>;
+  players?: Array<{
+    team?: { id?: number | null; name?: string | null; logo?: string | null };
+    players?: Array<{
+      player?: { id?: number | null; name?: string | null; photo?: string | null };
+      statistics?: Array<{
+        games?: {
+          minutes?: number | null;
+          number?: number | null;
+          position?: string | null;
+          rating?: string | null;
+          captain?: boolean | null;
+          substitute?: boolean | null;
+        };
+        offsides?: number | null;
+        shots?: { total?: number | null; on?: number | null };
+        goals?: { total?: number | null; conceded?: number | null; assists?: number | null; saves?: number | null };
+        passes?: { total?: number | null; key?: number | null; accuracy?: string | number | null };
+        tackles?: { total?: number | null; blocks?: number | null; interceptions?: number | null };
+        duels?: { total?: number | null; won?: number | null };
+        dribbles?: { attempts?: number | null; success?: number | null; past?: number | null };
+        fouls?: { drawn?: number | null; committed?: number | null };
+        cards?: { yellow?: number | null; red?: number | null };
+        penalty?: {
+          won?: number | null;
+          committed?: number | null;
+          scored?: number | null;
+          missed?: number | null;
+          saved?: number | null;
+        };
+      }>;
+    }>;
+  }>;
 };
 
 type ApiStanding = {
@@ -265,6 +385,68 @@ async function apiGet<T>(
   return Array.isArray(data.response) ? data.response : [];
 }
 
+function mapLineupPlayer(entry: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }): FixtureLineupPlayer {
+  return {
+    id: entry.player?.id ?? null,
+    name: entry.player?.name ?? null,
+    number: entry.player?.number ?? null,
+    pos: entry.player?.pos ?? null,
+    grid: entry.player?.grid ?? null,
+  };
+}
+
+function mapPlayerPerformance(entry: NonNullable<NonNullable<ApiFootballFixture["players"]>[number]["players"]>[number]): FixturePlayerPerformance {
+  const stats = entry.statistics?.[0] ?? {};
+  return {
+    player: {
+      id: entry.player?.id ?? null,
+      name: entry.player?.name ?? null,
+      photo: entry.player?.photo ?? null,
+    },
+    games: {
+      minutes: stats.games?.minutes ?? null,
+      number: stats.games?.number ?? null,
+      position: stats.games?.position ?? null,
+      rating: stats.games?.rating ?? null,
+      captain: stats.games?.captain ?? null,
+      substitute: stats.games?.substitute ?? null,
+    },
+    offsides: stats.offsides ?? null,
+    shots: { total: stats.shots?.total ?? null, on: stats.shots?.on ?? null },
+    goals: {
+      total: stats.goals?.total ?? null,
+      conceded: stats.goals?.conceded ?? null,
+      assists: stats.goals?.assists ?? null,
+      saves: stats.goals?.saves ?? null,
+    },
+    passes: {
+      total: stats.passes?.total ?? null,
+      key: stats.passes?.key ?? null,
+      accuracy: stats.passes?.accuracy ?? null,
+    },
+    tackles: {
+      total: stats.tackles?.total ?? null,
+      blocks: stats.tackles?.blocks ?? null,
+      interceptions: stats.tackles?.interceptions ?? null,
+    },
+    duels: { total: stats.duels?.total ?? null, won: stats.duels?.won ?? null },
+    dribbles: {
+      attempts: stats.dribbles?.attempts ?? null,
+      success: stats.dribbles?.success ?? null,
+      past: stats.dribbles?.past ?? null,
+    },
+    fouls: { drawn: stats.fouls?.drawn ?? null, committed: stats.fouls?.committed ?? null },
+    cards: { yellow: stats.cards?.yellow ?? null, red: stats.cards?.red ?? null },
+    penalty: {
+      won: stats.penalty?.won ?? null,
+      committed: stats.penalty?.committed ?? null,
+      scored: stats.penalty?.scored ?? null,
+      missed: stats.penalty?.missed ?? null,
+      saved: stats.penalty?.saved ?? null,
+    },
+  };
+}
+
 function mapFixture(item: ApiFootballFixture): Fixture | null {
   if (
     !validPositiveId(item?.fixture?.id)
@@ -328,6 +510,52 @@ function mapFixture(item: ApiFootballFixture): Fixture | null {
         away: item.score?.penalty?.away ?? null,
       },
     },
+    events: (item.events ?? []).map((event) => ({
+      time: { elapsed: event.time?.elapsed ?? null, extra: event.time?.extra ?? null },
+      team: {
+        id: event.team?.id ?? null,
+        name: event.team?.name ?? null,
+        logo: event.team?.logo ?? null,
+      },
+      player: { id: event.player?.id ?? null, name: event.player?.name ?? null },
+      assist: { id: event.assist?.id ?? null, name: event.assist?.name ?? null },
+      type: event.type ?? null,
+      detail: event.detail ?? null,
+      comments: event.comments ?? null,
+    })),
+    lineups: (item.lineups ?? []).map((lineup) => ({
+      team: {
+        id: lineup.team?.id ?? null,
+        name: lineup.team?.name ?? null,
+        logo: lineup.team?.logo ?? null,
+      },
+      formation: lineup.formation ?? null,
+      coach: {
+        id: lineup.coach?.id ?? null,
+        name: lineup.coach?.name ?? null,
+        photo: lineup.coach?.photo ?? null,
+      },
+      startXI: (lineup.startXI ?? []).map(mapLineupPlayer),
+      substitutes: (lineup.substitutes ?? []).map(mapLineupPlayer),
+    })),
+    statistics: (item.statistics ?? []).map((teamStats) => ({
+      team: {
+        id: teamStats.team?.id ?? null,
+        name: teamStats.team?.name ?? null,
+        logo: teamStats.team?.logo ?? null,
+      },
+      statistics: (teamStats.statistics ?? [])
+        .filter((stat): stat is { type: string; value?: string | number | null } => typeof stat.type === "string")
+        .map((stat) => ({ type: stat.type, value: stat.value ?? null })),
+    })),
+    players: (item.players ?? []).map((teamPlayers) => ({
+      team: {
+        id: teamPlayers.team?.id ?? null,
+        name: teamPlayers.team?.name ?? null,
+        logo: teamPlayers.team?.logo ?? null,
+      },
+      players: (teamPlayers.players ?? []).map(mapPlayerPerformance),
+    })),
   };
 }
 
