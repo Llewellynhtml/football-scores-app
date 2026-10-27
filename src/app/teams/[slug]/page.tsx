@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { MatchList } from "@/components/MatchList";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getTeamBySlug, getTeamFixtures } from "@/lib/football";
+import { footballDataContext } from "@/lib/football-config";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TeamPage({ params }: Props) {
   const { slug } = await params;
+  const dataContext = footballDataContext();
   let team: Awaited<ReturnType<typeof getTeamBySlug>> = null;
   let fixtures: Awaited<ReturnType<typeof getTeamFixtures>> = [];
   let apiError = false;
@@ -141,7 +143,10 @@ export default async function TeamPage({ params }: Props) {
         </section>
 
         <div className="sectionHeading compactHeading">
-          <div><p className="eyebrow">NEXT MATCHES</p><h2>Upcoming fixtures</h2></div>
+          <div>
+            <p className="eyebrow">{dataContext.isHistoricalDevelopmentData ? `SEASON ${dataContext.freeSeason}` : "NEXT MATCHES"}</p>
+            <h2>{dataContext.isHistoricalDevelopmentData ? "Recent fixtures" : "Upcoming fixtures"}</h2>
+          </div>
           <span className="badge">{fixtures.length}</span>
         </div>
 
