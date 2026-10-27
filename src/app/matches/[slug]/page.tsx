@@ -69,6 +69,12 @@ export default async function MatchPage({ params }: Props) {
   const secondPeriod = match.periods.second
     ? timeInSouthAfrica(new Date(match.periods.second * 1000).toISOString())
     : "—";
+  const scoreParts = [
+    { label: "Half-time", short: "HT", score: match.scoreBreakdown.halftime },
+    { label: "Full-time", short: "FT", score: match.scoreBreakdown.fulltime },
+    { label: "Extra-time", short: "ET", score: match.scoreBreakdown.extratime },
+    { label: "Penalties", short: "PEN", score: match.scoreBreakdown.penalty },
+  ].filter(({ score }) => score.home !== null || score.away !== null);
 
   return (
     <main>
@@ -96,6 +102,28 @@ export default async function MatchPage({ params }: Props) {
             {match.away.winner ? <span className="winnerIndicator heroWinner">Winner</span> : null}
           </Link>
         </div>
+
+        <section className="scoreBreakdownPanel" aria-label="Score breakdown">
+          <div className="scoreBreakdownHeading">
+            <div>
+              <p className="eyebrow">SCORE BREAKDOWN</p>
+              <h2>Match score by stage</h2>
+            </div>
+          </div>
+          <div className="scoreBreakdownGrid">
+            <div className="scoreBreakdownItem total">
+              <span>Total</span>
+              <strong>{match.home.goals ?? "—"}–{match.away.goals ?? "—"}</strong>
+            </div>
+            {scoreParts.map(({ label, short, score }) => (
+              <div className="scoreBreakdownItem" key={short}>
+                <span>{label}</span>
+                <strong>{score.home ?? "—"}–{score.away ?? "—"}</strong>
+                <small>{short}</small>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="matchFacts">
           <div><span>Date</span><strong>{prettyDate(date)}</strong></div>
