@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MatchList } from "@/components/MatchList";
 import { SafeLogo } from "@/components/SafeLogo";
 import { SiteHeader } from "@/components/SiteHeader";
+import { prettyDate } from "@/lib/dates";
 import { getLeagueFixtures, resolveLeague, type Fixture, type LeagueCatalogItem } from "@/lib/football";
 
 type Props = { params: Promise<{ league: string }> };
@@ -37,8 +38,11 @@ function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof resolveLe
     ["Standings", coverage.standings],
     ["Players", coverage.players],
     ["Top scorers", coverage.top_scorers],
+    ["Top assists", coverage.top_assists],
+    ["Top cards", coverage.top_cards],
     ["Injuries", coverage.injuries],
     ["Predictions", coverage.predictions],
+    ["Odds", coverage.odds],
   ] as const;
 }
 
@@ -92,11 +96,46 @@ export default async function LeaguePage({ params }: Props) {
         <div className="leagueHero">
           <SafeLogo src={competition.logo} alt={competition.name} fallbackText={competition.name} size={64} />
           <div>
-            <p className="eyebrow">{competition.country.name} · {competition.type}</p>
+            <div className="leagueCountryMeta">
+              {competition.country.flag ? (
+                <SafeLogo
+                  src={competition.country.flag}
+                  alt={competition.country.name}
+                  fallbackText={competition.country.name}
+                  size={18}
+                />
+              ) : null}
+              <p className="eyebrow">
+                {competition.country.name}
+                {competition.country.code ? ` · ${competition.country.code}` : ""}
+                {" · "}{competition.type}
+              </p>
+            </div>
             <h1 className="pageTitle">{competition.name}</h1>
             <p className="muted">
               Season {competition.season.year}. Competition identity, season and coverage are supplied by API-Football.
             </p>
+          </div>
+        </div>
+
+        <div className="leagueSeasonFacts">
+          <div>
+            <span>Season</span>
+            <strong>{competition.season.year}</strong>
+          </div>
+          <div>
+            <span>Starts</span>
+            <strong>{competition.season.start ? prettyDate(competition.season.start) : "—"}</strong>
+          </div>
+          <div>
+            <span>Ends</span>
+            <strong>{competition.season.end ? prettyDate(competition.season.end) : "—"}</strong>
+          </div>
+          <div>
+            <span>Current season</span>
+            <strong className={competition.season.current ? "seasonState current" : "seasonState"}>
+              {competition.season.current ? "Yes" : "No"}
+            </strong>
           </div>
         </div>
 
