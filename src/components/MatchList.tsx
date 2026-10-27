@@ -73,6 +73,19 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
                     <span>{match.away.name}</span>
                     <SafeLogo src={match.away.logo} alt={match.away.name} fallbackText={match.away.name} size={24} />
                   </Link>
+
+                  <div className="matchExtraMeta">
+                    {match.referee ? (
+                      <span><strong>Referee</strong> {match.referee}</span>
+                    ) : null}
+                    {match.venue.name ? (
+                      <span><strong>Venue</strong> {match.venue.name}</span>
+                    ) : null}
+                    {match.venue.city ? (
+                      <span><strong>City</strong> {match.venue.city}</span>
+                    ) : null}
+                    <span><strong>Season</strong> {match.league.season}</span>
+                  </div>
                 </article>
               );
             })}
