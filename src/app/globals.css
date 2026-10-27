@@ -821,6 +821,97 @@ button, input, select { font: inherit; }
   padding: 24px;
 }
 
+.teamProfileDetails {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.teamProfileFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 10px;
+}
+
+.teamProfileFacts > div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.teamProfileFacts span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.teamProfileFacts strong {
+  min-width: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.teamFlagState {
+  color: var(--muted);
+}
+
+.teamFlagState.active {
+  color: var(--accent-strong);
+}
+
+.teamVenueCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.safeMediaObject {
+  display: block;
+  width: 100%;
+  height: 220px;
+  border: 0;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.safeMediaFallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.teamVenueCaption {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+}
+
+.teamVenueCaption h2 {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+.teamVenueCaption > span {
+  color: var(--muted);
+  font-size: 10px;
+  text-align: right;
+}
+
 .matchHero {
   display: grid;
   grid-template-columns: 1fr 180px 1fr;
@@ -1334,6 +1425,14 @@ button, input, select { font: inherit; }
   .matchHero { grid-template-columns: 1fr 110px 1fr; padding: 24px; }
   .matchFacts { grid-template-columns: repeat(2,1fr); }
   .cardGrid { grid-template-columns: 1fr; }
+
+  .teamProfileDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .teamProfileFacts {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -1452,6 +1551,23 @@ button, input, select { font: inherit; }
   }
 
   .teamHero { align-items: flex-start; }
+
+  .teamProfileFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .safeMediaObject {
+    height: 190px;
+  }
+
+  .teamVenueCaption {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .teamVenueCaption > span {
+    text-align: left;
+  }
 
   .sportsGrid { grid-template-columns: 1fr; }
   .sportLandingHero { align-items: flex-start; }
