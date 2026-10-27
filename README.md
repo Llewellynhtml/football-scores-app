@@ -1,6 +1,6 @@
 # Live Sports App
 
-A private Next.js + TypeScript multi-sport scores platform deployed on Hostinger.
+A private Next.js + TypeScript multi-sport scores platform deployed on Hostinger and designed for a worldwide audience.
 
 ## API-driven sports data
 
@@ -15,7 +15,20 @@ API-Football is the source of truth for:
 - standings
 - teams and team profiles
 
-The football homepage derives competition filters from the fixtures returned for the selected date. The league directory is generated from the API-Football current competition catalogue and cached server-side.
+The football homepage derives competition filters from API responses. The league directory is generated from API-Football and cached server-side.
+
+## Worldwide timezone model
+
+Sports providers are queried using UTC as the canonical source timezone. Browser-facing kickoff times, match dates and update timestamps are converted to the visitor's local timezone with the JavaScript Internationalization API. A visitor's location never limits which countries, leagues, teams or sports are available.
+
+## Football data modes
+
+The project supports two football data modes:
+
+- `API_FOOTBALL_DATA_MODE=free` — development mode for the Free API-Football plan. It selects `API_FOOTBALL_FREE_SEASON` (default `2024`) from each league's API-provided season catalogue and clearly labels the site as historical development data.
+- `API_FOOTBALL_DATA_MODE=current` — production/current-season mode for an upgraded API plan. It selects the season marked current by API-Football.
+
+The season fallback is application configuration only. League IDs, names, season objects, fixtures, standings and other sports facts still come from API-Football.
 
 ## Application configuration
 
@@ -37,7 +50,7 @@ Provider URLs, environment-variable names, route patterns, cache durations, stat
 
 Copy `.env.example` and configure deployment values in Hostinger. Do not commit real API keys or cron secrets.
 
-`SITE_URL` should be set to the production origin. Football season is not fixed locally; league season data comes from API-Football.
+`SITE_URL` should be set to the production origin. Keep provider timestamps in UTC. When the API plan is upgraded, change `API_FOOTBALL_DATA_MODE` from `free` to `current`; no page rewrite is required.
 
 ## Hostinger
 
