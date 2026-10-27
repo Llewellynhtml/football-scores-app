@@ -1,25 +1,15 @@
 import Link from "next/link";
 import { SafeLogo } from "@/components/SafeLogo";
+import { LocalDateTime, LocalTimezoneLabel } from "@/components/LocalDateTime";
 import type { Fixture } from "@/lib/football";
 import { matchUrl, slugify, teamUrl } from "@/lib/slug";
-import { timeInSouthAfrica } from "@/lib/dates";
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE"]);
 
 function displayStatus(match: Fixture) {
-  if (match.status === "NS") return timeInSouthAfrica(match.date);
   if (match.status === "FT") return "FT";
   if (match.elapsed) return match.extra ? `${match.elapsed}+${match.extra}'` : `${match.elapsed}'`;
   return match.status;
-}
-
-function periodTime(timestamp: number | null) {
-  if (!timestamp) return null;
-  return new Intl.DateTimeFormat("en-ZA", {
-    timeZone: "Africa/Johannesburg",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(timestamp * 1000));
 }
 
 function hasScore(score: { home: number | null; away: number | null }) {
@@ -77,7 +67,7 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
                 <article className={live ? "matchRow liveRow" : "matchRow"} key={match.id}>
                   <div className={live ? "matchMeta liveMeta" : "matchMeta"}>
                     {live ? <span className="liveDot" /> : null}
-                    <span>{displayStatus(match)}</span>
+                    <span>{match.status === "NS" ? <LocalDateTime value={match.date} mode="time" /> : displayStatus(match)}</span>
                   </div>
 
                   <Link className={match.home.winner ? "team winnerTeam" : "team"} href={teamUrl(match.home.name)} prefetch={false}>
@@ -130,17 +120,18 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
                     {match.extra ? (
                       <span><strong>Added time</strong> {match.extra} min</span>
                     ) : null}
+                    <span><strong>Your timezone</strong> <LocalTimezoneLabel /></span>
                     {match.timezone ? (
-                      <span><strong>Timezone</strong> {match.timezone}</span>
+                      <span><strong>Source timezone</strong> {match.timezone}</span>
                     ) : null}
                     {match.timestamp ? (
                       <span><strong>Timestamp</strong> {match.timestamp}</span>
                     ) : null}
-                    {periodTime(match.periods.first) ? (
-                      <span><strong>1H start</strong> {periodTime(match.periods.first)}</span>
+                    {match.periods.first ? (
+                      <span><strong>1H start</strong> <LocalDateTime value={match.periods.first} mode="time" /></span>
                     ) : null}
-                    {periodTime(match.periods.second) ? (
-                      <span><strong>2H start</strong> {periodTime(match.periods.second)}</span>
+                    {match.periods.second ? (
+                      <span><strong>2H start</strong> <LocalDateTime value={match.periods.second} mode="time" /></span>
                     ) : null}
                   </div>
                 </article>
