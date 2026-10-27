@@ -694,6 +694,126 @@ button, input, select { font: inherit; }
 
 .tableTeam { display: flex; align-items: center; gap: 8px; font-weight: 700; }
 
+.standingsGroups {
+  display: grid;
+  gap: 18px;
+}
+
+.standingsGroup {
+  min-width: 0;
+}
+
+.standingsGroupHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 18px 0 10px;
+}
+
+.standingsGroupHeading h2 {
+  margin: 4px 0 0;
+  font-size: 17px;
+}
+
+.standingsTableDetailed {
+  min-width: 1480px;
+}
+
+.standingsTableDetailed th:nth-child(2),
+.standingsTableDetailed td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
+.standingsTableDetailed th:nth-child(2) {
+  background: var(--surface-2);
+  z-index: 3;
+}
+
+.formRun {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.formResult {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.form-w { background: var(--accent); }
+.form-d { background: #8a94a6; }
+.form-l { background: var(--danger); }
+
+.standingStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.standingStatus-up {
+  border-color: #b8dfc6;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.standingStatus-down {
+  border-color: #f6c7c3;
+  background: #fff4f2;
+  color: var(--danger);
+}
+
+.standingSplit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.standingSplit strong {
+  font-size: 10px;
+}
+
+.standingSplit small {
+  color: var(--subtle);
+  font-size: 8px;
+}
+
+.standingDescription {
+  min-width: 210px;
+  max-width: 280px;
+  white-space: normal;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.standingUpdated {
+  min-width: 132px;
+  white-space: normal;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.standingsMuted {
+  color: var(--subtle);
+}
+
 .teamHero {
   display: flex;
   align-items: center;
