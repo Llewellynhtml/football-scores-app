@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SafeLogo } from "@/components/SafeLogo";
+import { MatchCentreDetails } from "@/components/MatchCentreDetails";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -139,6 +140,8 @@ export default async function MatchPage({ params }: Props) {
           <div><span>First period</span><strong>{firstPeriod}</strong></div>
           <div><span>Second period</span><strong>{secondPeriod}</strong></div>
         </div>
+
+        <MatchCentreDetails fixture={match} />
       </section>
     </main>
   );
