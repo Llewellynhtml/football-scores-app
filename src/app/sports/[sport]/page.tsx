@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { GenericEventList } from "@/components/GenericEventList";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { SiteHeader } from "@/components/SiteHeader";
-import { dateInSouthAfrica, prettyDate } from "@/lib/dates";
+import { dateInUtc } from "@/lib/dates";
 import { getEventsByDate, sportHasKey } from "@/sports/generic/provider";
 import { getSport } from "@/sports/registry";
 import type { UnifiedSportEvent, EventValidationBatch } from "@/sports/generic/types";
@@ -28,7 +29,7 @@ export default async function SportPage({ params }: Props) {
   if (slug === "football") redirect("/");
   if (slug === "rugby") redirect("/sports/rugby");
 
-  const date = dateInSouthAfrica();
+  const date = dateInUtc();
   let events: UnifiedSportEvent[] = [];
   let diagnostics: EventValidationBatch["diagnostics"] = { received: 0, accepted: 0, rejected: 0, reasons: {} };
   let apiError = false;
@@ -50,7 +51,7 @@ export default async function SportPage({ params }: Props) {
           <div>
             <p className="eyebrow">{sport.name.toUpperCase()}</p>
             <h1>{sport.name} scores</h1>
-            <p>{prettyDate(date)} · South Africa time</p>
+            <p><LocalDateTime value={date} mode="date" /> · Your local time</p>
           </div>
           <div className="scoreboardMetric">
             <span>{apiError ? "—" : events.length}</span>
@@ -82,7 +83,7 @@ export default async function SportPage({ params }: Props) {
               <div className="sectionHeading compactScoreHeading">
                 <div>
                   <p className="eyebrow">LIVE DATA</p>
-                  <h2>{prettyDate(date)}</h2>
+                  <h2><LocalDateTime value={date} mode="date" /></h2>
                 </div>
                 <span className="badge">15 min free-tier cache</span>
               </div>
