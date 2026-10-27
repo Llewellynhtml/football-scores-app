@@ -170,7 +170,7 @@ function validGames(data: RawGame[]) {
 }
 
 export async function getRugbyGamesByDate(date: string) {
-  const data = await apiGet<RawGame>("/games", { date, timezone: "Africa/Johannesburg" }, 900);
+  const data = await apiGet<RawGame>("/games", { date, timezone: "UTC" }, 900);
   return validGames(data);
 }
 
