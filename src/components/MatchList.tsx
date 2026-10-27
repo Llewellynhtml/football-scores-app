@@ -22,6 +22,14 @@ function periodTime(timestamp: number | null) {
   }).format(new Date(timestamp * 1000));
 }
 
+function hasScore(score: { home: number | null; away: number | null }) {
+  return score.home !== null || score.away !== null;
+}
+
+function scoreText(score: { home: number | null; away: number | null }) {
+  return `${score.home ?? "—"}–${score.away ?? "—"}`;
+}
+
 export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
   const grouped = fixtures.reduce<Record<string, Fixture[]>>((acc, fixture) => {
     const key = `${fixture.league.country} · ${fixture.league.name}`;
@@ -89,6 +97,21 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
                     <span>{match.away.name}</span>
                     <SafeLogo src={match.away.logo} alt={match.away.name} fallbackText={match.away.name} size={24} />
                   </Link>
+
+                  <div className="scoreBreakdownCompact">
+                    {hasScore(match.scoreBreakdown.halftime) ? (
+                      <span><strong>HT</strong> {scoreText(match.scoreBreakdown.halftime)}</span>
+                    ) : null}
+                    {hasScore(match.scoreBreakdown.fulltime) ? (
+                      <span><strong>FT</strong> {scoreText(match.scoreBreakdown.fulltime)}</span>
+                    ) : null}
+                    {hasScore(match.scoreBreakdown.extratime) ? (
+                      <span><strong>ET</strong> {scoreText(match.scoreBreakdown.extratime)}</span>
+                    ) : null}
+                    {hasScore(match.scoreBreakdown.penalty) ? (
+                      <span><strong>PEN</strong> {scoreText(match.scoreBreakdown.penalty)}</span>
+                    ) : null}
+                  </div>
 
                   <div className="matchExtraMeta">
                     {match.referee ? (
