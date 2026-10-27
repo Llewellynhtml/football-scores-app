@@ -6,6 +6,7 @@ import { SafeLogo } from "@/components/SafeLogo";
 import { SiteHeader } from "@/components/SiteHeader";
 import { prettyDate } from "@/lib/dates";
 import { getLeagueFixtures, resolveLeague, type Fixture, type LeagueCatalogItem } from "@/lib/football";
+import { footballDataContext } from "@/lib/football-config";
 
 type Props = { params: Promise<{ league: string }> };
 
@@ -48,6 +49,7 @@ function coverageItems(coverage: NonNullable<Awaited<ReturnType<typeof resolveLe
 
 export default async function LeaguePage({ params }: Props) {
   const { league } = await params;
+  const dataContext = footballDataContext();
   let competition: LeagueCatalogItem | null = null;
   let fixtures: Fixture[] = [];
   let apiError = false;
@@ -138,6 +140,12 @@ export default async function LeaguePage({ params }: Props) {
             </strong>
           </div>
         </div>
+
+        {dataContext.isHistoricalDevelopmentData ? (
+          <div className="notice">
+            Free-plan development mode is showing API-Football season {competition.season.year}. Switch <code>API_FOOTBALL_DATA_MODE</code> to <code>current</code> after upgrading the API plan.
+          </div>
+        ) : null}
 
         <div className="coverageGrid leagueCoverageCompact">
           {coverageItems(competition.season.coverage).map(([label, available]) => (
