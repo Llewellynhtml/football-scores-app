@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SafeLogo } from "@/components/SafeLogo";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import type { RugbyGame } from "@/sports/rugby/types";
 
 function score(value: number | null) {
@@ -8,7 +9,6 @@ function score(value: number | null) {
 
 function displayStatus(game: RugbyGame) {
   if (game.status.short.toLowerCase().includes("finished")) return "FT";
-  if (game.status.short.toLowerCase().includes("not")) return game.time ?? game.status.short;
   return game.status.short;
 }
 
@@ -40,7 +40,7 @@ export function RugbyGameList({ games }: { games: RugbyGame[] }) {
 
           {leagueGames.map((game) => (
             <article className="matchRow" key={game.id}>
-              <div className="matchMeta"><span>{displayStatus(game)}</span></div>
+              <div className="matchMeta"><span>{game.status.short.toLowerCase().includes("not") && game.timestamp ? <LocalDateTime value={game.timestamp} mode="time" /> : displayStatus(game)}</span></div>
 
               <div className="team">
                 <SafeLogo src={game.home.logo} alt={game.home.name} fallbackText={game.home.name} size={26} />
