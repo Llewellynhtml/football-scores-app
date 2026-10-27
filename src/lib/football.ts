@@ -1,4 +1,5 @@
-import { dateInSouthAfrica, shiftDate } from "@/lib/dates";
+import { shiftDate } from "@/lib/dates";
+import { FOOTBALL_DATA_MODE, FOOTBALL_FREE_SEASON, FOOTBALL_SOURCE_TIMEZONE, footballQueryDate, selectFootballSeason } from "@/lib/football-config";
 import { recordProviderResponse } from "@/lib/api-usage";
 import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
 import { slugify } from "@/lib/slug";
@@ -365,7 +366,7 @@ type ApiResponse<T> = {
 };
 
 const BASE_URL = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
-const TIMEZONE = process.env.FOOTBALL_TIMEZONE ?? "Africa/Johannesburg";
+const TIMEZONE = FOOTBALL_SOURCE_TIMEZONE;
 
 function hasApiErrors(errors: unknown) {
   if (!errors) return false;
@@ -373,6 +374,15 @@ function hasApiErrors(errors: unknown) {
   if (typeof errors === "object") return Object.keys(errors as Record<string, unknown>).length > 0;
   if (typeof errors === "string") return errors.trim().length > 0;
   return false;
+}
+
+function apiErrorDetail(errors: unknown) {
+  if (!hasApiErrors(errors)) return null;
+  try {
+    return typeof errors === "string" ? errors : JSON.stringify(errors);
+  } catch {
+    return String(errors);
+  }
 }
 
 async function apiGet<T>(
@@ -396,12 +406,17 @@ async function apiGet<T>(
   recordProviderResponse(response.headers);
 
   if (!response.ok) {
-    throw new Error(`API-Football request failed with status ${response.status}`);
+    throw new Error(
+      `API-Football request failed: endpoint=${pathname} status=${response.status} params=${JSON.stringify(params)}`,
+    );
   }
 
   const data = (await response.json()) as ApiResponse<T>;
-  if (hasApiErrors(data.errors)) {
-    throw new Error(`API-Football returned an error for ${pathname}`);
+  const providerError = apiErrorDetail(data.errors);
+  if (providerError) {
+    throw new Error(
+      `API-Football provider error: endpoint=${pathname} params=${JSON.stringify(params)} errors=${providerError}`,
+    );
   }
 
   if (typeof data.results === "number" && data.results === 0) return [];
@@ -594,8 +609,7 @@ function mapTeam(item: ApiTeam): TeamProfile | null {
 function mapLeague(item: ApiLeagueEnvelope): LeagueCatalogItem | null {
   if (!validPositiveId(item?.league?.id) || !validName(item?.league?.name)) return null;
 
-  const season = item.seasons?.find((entry) => entry.current)
-    ?? item.seasons?.slice().sort((a, b) => b.year - a.year)[0];
+  const season = selectFootballSeason(item.seasons ?? []);
 
   if (!season) return null;
 
@@ -692,7 +706,7 @@ async function getLeagueTeamsFor(ref: LeagueCatalogItem): Promise<TeamProfile[]>
 }
 
 async function getLeagueFixturesFor(ref: LeagueCatalogItem): Promise<Fixture[]> {
-  const today = dateInSouthAfrica();
+  const today = footballQueryDate();
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     {
@@ -813,9 +827,13 @@ export async function getTeamBySlug(slug: string): Promise<TeamProfile | null> {
 }
 
 export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
+  const params = FOOTBALL_DATA_MODE === "free"
+    ? { team: teamId, season: FOOTBALL_FREE_SEASON, last: 8, timezone: TIMEZONE }
+    : { team: teamId, next: 8, timezone: TIMEZONE };
+
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
-    { team: teamId, next: 8, timezone: TIMEZONE },
+    params,
     1800,
   );
   return validFixtures(data);
