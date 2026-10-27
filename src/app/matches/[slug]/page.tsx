@@ -63,16 +63,28 @@ export default async function MatchPage({ params }: Props) {
   }
 
   const date = match.date.slice(0, 10);
+  const firstPeriod = match.periods.first
+    ? timeInSouthAfrica(new Date(match.periods.first * 1000).toISOString())
+    : "—";
+  const secondPeriod = match.periods.second
+    ? timeInSouthAfrica(new Date(match.periods.second * 1000).toISOString())
+    : "—";
 
   return (
     <main>
       <SiteHeader />
       <section className="content pageTop">
-        <p className="eyebrow">{match.league.country} · {match.league.name}</p>
+        <div className="matchLeagueEyebrow">
+          {match.league.flag ? (
+            <SafeLogo src={match.league.flag} alt={match.league.country} fallbackText={match.league.country} size={16} />
+          ) : null}
+          <p className="eyebrow">{match.league.country} · {match.league.name}</p>
+        </div>
         <div className="matchHero">
           <Link className="matchTeamHero" href={teamUrl(match.home.name)}>
             <SafeLogo src={match.home.logo} alt={match.home.name} fallbackText={match.home.name} size={74} />
             <h2>{match.home.name}</h2>
+            {match.home.winner ? <span className="winnerIndicator heroWinner">Winner</span> : null}
           </Link>
           <div className="heroScore">
             <span className="statusBadge">{match.statusLong}</span>
@@ -81,6 +93,7 @@ export default async function MatchPage({ params }: Props) {
           <Link className="matchTeamHero" href={teamUrl(match.away.name)}>
             <SafeLogo src={match.away.logo} alt={match.away.name} fallbackText={match.away.name} size={74} />
             <h2>{match.away.name}</h2>
+            {match.away.winner ? <span className="winnerIndicator heroWinner">Winner</span> : null}
           </Link>
         </div>
 
@@ -88,7 +101,15 @@ export default async function MatchPage({ params }: Props) {
           <div><span>Date</span><strong>{prettyDate(date)}</strong></div>
           <div><span>Kick-off</span><strong>{timeInSouthAfrica(match.date)}</strong></div>
           <div><span>Venue</span><strong>{match.venue.name ?? "—"}</strong></div>
+          <div><span>City</span><strong>{match.venue.city ?? "—"}</strong></div>
           <div><span>Referee</span><strong>{match.referee ?? "—"}</strong></div>
+          <div><span>Season</span><strong>{match.league.season}</strong></div>
+          <div><span>Round</span><strong>{match.league.round ?? "—"}</strong></div>
+          <div><span>Added time</span><strong>{match.extra ? `${match.extra} min` : "—"}</strong></div>
+          <div><span>Timezone</span><strong>{match.timezone ?? "—"}</strong></div>
+          <div><span>Timestamp</span><strong>{match.timestamp ?? "—"}</strong></div>
+          <div><span>First period</span><strong>{firstPeriod}</strong></div>
+          <div><span>Second period</span><strong>{secondPeriod}</strong></div>
         </div>
       </section>
     </main>
