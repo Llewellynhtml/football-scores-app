@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SafeLogo } from "@/components/SafeLogo";
+import { LocalDateTime, LocalTimezoneLabel } from "@/components/LocalDateTime";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getRugbyGameById } from "@/sports/rugby/provider";
 
@@ -67,8 +68,9 @@ export default async function RugbyGamePage({ params }: Props) {
         </div>
 
         <div className="matchFacts">
-          <div><span>Date</span><strong>{game.date || "—"}</strong></div>
-          <div><span>Time</span><strong>{game.time ?? "—"}</strong></div>
+          <div><span>Date</span><strong>{game.timestamp ? <LocalDateTime value={game.timestamp} mode="date" /> : game.date || "—"}</strong></div>
+          <div><span>Time</span><strong>{game.timestamp ? <LocalDateTime value={game.timestamp} mode="time" /> : game.time ?? "—"}</strong></div>
+          <div><span>Your timezone</span><strong><LocalTimezoneLabel /></strong></div>
           <div><span>Competition</span><strong>{game.league.name}</strong></div>
           <div><span>Status</span><strong>{game.status.long}</strong></div>
         </div>
