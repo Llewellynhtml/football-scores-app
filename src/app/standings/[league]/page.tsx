@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SafeLogo } from "@/components/SafeLogo";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStandings, resolveLeague, type LeagueCatalogItem, type StandingRecord, type StandingRow } from "@/lib/football";
 import { teamUrl } from "@/lib/slug";
@@ -36,20 +37,6 @@ function goalsText(record: StandingRecord) {
   return `${record.goalsFor}:${record.goalsAgainst}`;
 }
 
-function updatedAt(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-ZA", {
-    timeZone: "Africa/Johannesburg",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function FormCell({ form }: { form: string | null }) {
   if (!form) return <span className="standingsMuted">—</span>;
@@ -206,7 +193,7 @@ export default async function StandingsPage({ params }: Props) {
                             </div>
                           </td>
                           <td className="standingDescription">{row.description ?? "—"}</td>
-                          <td className="standingUpdated">{updatedAt(row.update)}</td>
+                          <td className="standingUpdated">{row.update ? <LocalDateTime value={row.update} mode="datetime" /> : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
