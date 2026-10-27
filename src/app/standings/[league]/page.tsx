@@ -5,6 +5,7 @@ import { SafeLogo } from "@/components/SafeLogo";
 import { LocalDateTime } from "@/components/LocalDateTime";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getStandings, resolveLeague, type LeagueCatalogItem, type StandingRecord, type StandingRow } from "@/lib/football";
+import { footballDataContext } from "@/lib/football-config";
 import { teamUrl } from "@/lib/slug";
 
 type Props = { params: Promise<{ league: string }> };
@@ -54,6 +55,7 @@ function FormCell({ form }: { form: string | null }) {
 
 export default async function StandingsPage({ params }: Props) {
   const { league } = await params;
+  const dataContext = footballDataContext();
   let competition: LeagueCatalogItem | null = null;
   let standings: StandingRow[] = [];
   let apiError = false;
@@ -113,6 +115,12 @@ export default async function StandingsPage({ params }: Props) {
           </div>
           <Link className="button secondary" href={`/leagues/${competition.routeKey}`}>Fixtures</Link>
         </div>
+
+        {dataContext.isHistoricalDevelopmentData ? (
+          <div className="notice">
+            Free-plan development mode is showing season {competition.season.year} standings from API-Football.
+          </div>
+        ) : null}
 
         {apiError ? (
           <div className="notice error">
