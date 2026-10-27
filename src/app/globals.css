@@ -532,6 +532,33 @@ button, input, select { font: inherit; }
 .score strong { min-width: 13px; text-align: center; }
 .score:hover { background: var(--surface-3); }
 
+.scoreBreakdownCompact {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  margin-top: -2px;
+}
+
+.scoreBreakdownCompact span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.scoreBreakdownCompact strong {
+  color: var(--text);
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
 .matchExtraMeta {
   grid-column: 2 / -1;
   display: flex;
@@ -740,6 +767,64 @@ button, input, select { font: inherit; }
   gap: 7px;
 }
 
+.scoreBreakdownPanel {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.scoreBreakdownHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.scoreBreakdownHeading h2 {
+  margin: 4px 0 0;
+  font-size: 16px;
+}
+
+.scoreBreakdownGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scoreBreakdownItem {
+  min-width: 0;
+  padding: 11px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scoreBreakdownItem.total {
+  border-color: #b8dfc6;
+  background: var(--accent-soft);
+}
+
+.scoreBreakdownItem span,
+.scoreBreakdownItem small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.scoreBreakdownItem strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.scoreBreakdownItem small {
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+
 .heroWinner {
   margin-top: -3px;
 }
@@ -905,11 +990,23 @@ button, input, select { font: inherit; }
     align-self: center;
   }
 
+  .scoreBreakdownCompact,
   .matchExtraMeta {
     grid-column: 2 / 4;
     margin-top: 1px;
     padding-right: 2px;
+  }
+
+  .scoreBreakdownCompact {
+    gap: 4px 6px;
+  }
+
+  .matchExtraMeta {
     gap: 3px 10px;
+  }
+
+  .scoreBreakdownGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .pageTop,
