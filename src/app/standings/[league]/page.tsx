@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SafeLogo } from "@/components/SafeLogo";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getStandings, resolveLeague, type LeagueCatalogItem, type StandingRow } from "@/lib/football";
+import { getStandings, resolveLeague, type LeagueCatalogItem, type StandingRecord, type StandingRow } from "@/lib/football";
 import { teamUrl } from "@/lib/slug";
 
 type Props = { params: Promise<{ league: string }> };
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return {
       title: `${competition.name} Standings | Live Sports`,
-      description: `Current ${competition.name} table, points, wins, draws, losses and goal difference.`,
+      description: `Current ${competition.name} table, points, wins, draws, losses, form, home and away records.`,
     };
   } catch (error) {
     console.error("Standings metadata API error", { league, error });
@@ -26,6 +26,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: "Football league standings.",
     };
   }
+}
+
+function recordText(record: StandingRecord) {
+  return `${record.win}-${record.draw}-${record.lose}`;
+}
+
+function goalsText(record: StandingRecord) {
+  return `${record.goalsFor}:${record.goalsAgainst}`;
+}
+
+function updatedAt(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-ZA", {
+    timeZone: "Africa/Johannesburg",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function FormCell({ form }: { form: string | null }) {
+  if (!form) return <span className="standingsMuted">—</span>;
+
+  return (
+    <span className="formRun" aria-label={`Form ${form}`}>
+      {form.split("").map((result, index) => (
+        <span className={`formResult form-${result.toLowerCase()}`} key={`${result}-${index}`}>
+          {result}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export default async function StandingsPage({ params }: Props) {
@@ -69,6 +106,12 @@ export default async function StandingsPage({ params }: Props) {
     );
   }
 
+  const groupedStandings = standings.reduce<Record<string, StandingRow[]>>((groups, row) => {
+    const group = row.group?.trim() || "Standings";
+    (groups[group] ??= []).push(row);
+    return groups;
+  }, {});
+
   return (
     <main>
       <SiteHeader />
@@ -77,7 +120,9 @@ export default async function StandingsPage({ params }: Props) {
         <div className="sectionHeading">
           <div>
             <h1 className="pageTitle">{competition.name} standings</h1>
-            <p className="muted">Season {competition.season.year} table from API-Football.</p>
+            <p className="muted">
+              Season {competition.season.year}. Rank, records, form, movement and qualification/relegation zones are supplied by API-Football.
+            </p>
           </div>
           <Link className="button secondary" href={`/leagues/${competition.routeKey}`}>Fixtures</Link>
         </div>
@@ -97,26 +142,78 @@ export default async function StandingsPage({ params }: Props) {
             <p>API-Football returned no standings for this competition and season.</p>
           </div>
         ) : (
-          <div className="tableWrap">
-            <table className="standingsTable">
-              <thead><tr><th>#</th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
-              <tbody>
-                {standings.map((row) => (
-                  <tr key={row.team.id}>
-                    <td>{row.rank}</td>
-                    <td>
-                      <Link className="tableTeam" href={teamUrl(row.team.name)} prefetch={false}>
-                        <SafeLogo src={row.team.logo} alt={row.team.name} fallbackText={row.team.name} size={24} />
-                        <span>{row.team.name}</span>
-                      </Link>
-                    </td>
-                    <td>{row.played}</td><td>{row.win}</td><td>{row.draw}</td><td>{row.lose}</td>
-                    <td>{row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}</td>
-                    <td><strong>{row.points}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="standingsGroups">
+            {Object.entries(groupedStandings).map(([group, rows]) => (
+              <section className="standingsGroup" key={group}>
+                <div className="standingsGroupHeading">
+                  <div>
+                    <p className="eyebrow">GROUP</p>
+                    <h2>{group}</h2>
+                  </div>
+                  <span className="badge">{rows.length} teams</span>
+                </div>
+
+                <div className="tableWrap">
+                  <table className="standingsTable standingsTableDetailed">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Club</th>
+                        <th>P</th><th>W</th><th>D</th><th>L</th>
+                        <th>GF</th><th>GA</th><th>GD</th><th>Pts</th>
+                        <th>Form</th>
+                        <th>Status</th>
+                        <th>Home</th>
+                        <th>Away</th>
+                        <th>Zone / description</th>
+                        <th>Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={`${group}-${row.team.id}-${row.rank}`}>
+                          <td>{row.rank}</td>
+                          <td>
+                            <Link className="tableTeam" href={teamUrl(row.team.name)} prefetch={false}>
+                              <SafeLogo src={row.team.logo} alt={row.team.name} fallbackText={row.team.name} size={24} />
+                              <span>{row.team.name}</span>
+                            </Link>
+                          </td>
+                          <td>{row.played}</td>
+                          <td>{row.win}</td>
+                          <td>{row.draw}</td>
+                          <td>{row.lose}</td>
+                          <td>{row.goalsFor}</td>
+                          <td>{row.goalsAgainst}</td>
+                          <td>{row.goalsDiff > 0 ? `+${row.goalsDiff}` : row.goalsDiff}</td>
+                          <td><strong>{row.points}</strong></td>
+                          <td><FormCell form={row.form} /></td>
+                          <td>
+                            {row.status ? (
+                              <span className={`standingStatus standingStatus-${row.status.toLowerCase()}`}>{row.status}</span>
+                            ) : <span className="standingsMuted">—</span>}
+                          </td>
+                          <td>
+                            <div className="standingSplit">
+                              <strong>{recordText(row.home)}</strong>
+                              <small>{goalsText(row.home)} GF:GA</small>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="standingSplit">
+                              <strong>{recordText(row.away)}</strong>
+                              <small>{goalsText(row.away)} GF:GA</small>
+                            </div>
+                          </td>
+                          <td className="standingDescription">{row.description ?? "—"}</td>
+                          <td className="standingUpdated">{updatedAt(row.update)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </section>
