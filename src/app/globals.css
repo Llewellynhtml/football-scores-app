@@ -829,6 +829,296 @@ button, input, select { font: inherit; }
   margin-top: -3px;
 }
 
+
+.matchCentre {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.matchCentreSection {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.matchCentreHeading {
+  margin-bottom: 14px;
+}
+
+.matchCentreHeading h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+
+.matchCentreEmpty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.eventTimeline {
+  display: grid;
+}
+
+.eventTimelineRow {
+  display: grid;
+  grid-template-columns: 52px 26px minmax(0,1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.eventTimelineRow:last-child { border-bottom: 0; }
+
+.eventMinute {
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.eventTimelineText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.eventTimelineText strong {
+  font-size: 12px;
+}
+
+.eventTimelineText span {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.lineupsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+
+.lineupTeamCard,
+.playerStatsTeam {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.matchCentreTeamHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.matchCentreTeamHeader > div,
+.matchCentreTeamHeader > strong {
+  min-width: 0;
+}
+
+.matchCentreTeamHeader > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.matchCentreTeamHeader strong {
+  font-size: 12px;
+}
+
+.matchCentreTeamHeader span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.coachRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.coachRow > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coachRow span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.coachRow strong { font-size: 11px; }
+
+.lineupListBlock {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lineupListBlock:last-child { border-bottom: 0; }
+
+.lineupListBlock h3 {
+  margin: 0 0 9px;
+  font-size: 11px;
+}
+
+.lineupPlayers {
+  display: grid;
+  gap: 6px;
+}
+
+.lineupPlayer {
+  display: grid;
+  grid-template-columns: 30px minmax(0,1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.shirtNumber {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.lineupPlayer > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lineupPlayer strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.lineupPlayer small {
+  color: var(--subtle);
+  font-size: 9px;
+}
+
+.teamStatsTable {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.teamStatsHeader,
+.teamStatsRow {
+  display: grid;
+  grid-template-columns: minmax(90px,1fr) minmax(140px,1.2fr) minmax(90px,1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  text-align: center;
+}
+
+.teamStatsHeader {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.teamStatsHeader strong { font-size: 11px; }
+.teamStatsHeader span { color: var(--muted); font-size: 9px; }
+
+.teamStatsRow {
+  border-bottom: 1px solid var(--line);
+}
+
+.teamStatsRow:last-child { border-bottom: 0; }
+.teamStatsRow strong { font-size: 11px; }
+.teamStatsRow span { color: var(--muted); font-size: 10px; }
+
+.playerStatsTeams {
+  display: grid;
+  gap: 12px;
+}
+
+.playerStatsTableWrap {
+  overflow-x: auto;
+}
+
+.playerStatsTable {
+  width: 100%;
+  min-width: 1380px;
+  border-collapse: collapse;
+}
+
+.playerStatsTable th,
+.playerStatsTable td {
+  padding: 8px 9px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.playerStatsTable th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 9px;
+  z-index: 1;
+}
+
+.playerStatsTable th:first-child,
+.playerStatsTable td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+.playerStatsTable th:first-child {
+  background: var(--surface-2);
+  z-index: 3;
+}
+
+.playerStatsTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.playerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.playerIdentity > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playerIdentity strong { font-size: 10px; }
+.playerIdentity small { color: var(--subtle); font-size: 8px; }
+
 .sportsIntro { font-size: 16px; }
 
 .sportsGrid {
@@ -1020,6 +1310,27 @@ button, input, select { font: inherit; }
   .matchTeamHero h2 { font-size: 14px; }
   .heroScore > div { font-size: 26px; }
   .matchFacts { grid-template-columns: 1fr; }
+
+  .lineupsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .matchCentreSection {
+    padding: 14px 12px;
+  }
+
+  .eventTimelineRow {
+    grid-template-columns: 44px 24px minmax(0,1fr);
+    gap: 7px;
+  }
+
+  .teamStatsHeader,
+  .teamStatsRow {
+    grid-template-columns: 72px minmax(110px,1fr) 72px;
+    padding: 8px 6px;
+    gap: 6px;
+  }
+
   .teamHero { align-items: flex-start; }
 
   .sportsGrid { grid-template-columns: 1fr; }
