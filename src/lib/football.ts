@@ -111,18 +111,33 @@ export type FixtureCompetition = {
   routeKey: string;
 };
 
-export type StandingRow = {
-  rank: number;
-  team: { id: number; name: string; logo: string };
-  points: number;
-  goalsDiff: number;
-  form: string | null;
+export type StandingRecord = {
   played: number;
   win: number;
   draw: number;
   lose: number;
   goalsFor: number;
   goalsAgainst: number;
+};
+
+export type StandingRow = {
+  rank: number;
+  team: { id: number; name: string; logo: string };
+  points: number;
+  goalsDiff: number;
+  group: string | null;
+  form: string | null;
+  status: string | null;
+  description: string | null;
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  home: StandingRecord;
+  away: StandingRecord;
+  update: string | null;
 };
 
 export type TeamProfile = {
@@ -278,19 +293,27 @@ type ApiFootballFixture = {
   }>;
 };
 
+type ApiStandingRecord = {
+  played: number;
+  win: number;
+  draw: number;
+  lose: number;
+  goals: { for: number; against: number };
+};
+
 type ApiStanding = {
   rank: number;
   team: { id: number; name: string; logo: string };
   points: number;
   goalsDiff: number;
+  group: string | null;
   form: string | null;
-  all: {
-    played: number;
-    win: number;
-    draw: number;
-    lose: number;
-    goals: { for: number; against: number };
-  };
+  status: string | null;
+  description: string | null;
+  all: ApiStandingRecord;
+  home: ApiStandingRecord;
+  away: ApiStandingRecord;
+  update: string | null;
 };
 
 type ApiTeam = {
@@ -693,21 +716,42 @@ async function getStandingsFor(ref: LeagueCatalogItem): Promise<StandingRow[]> {
     43200,
   );
 
-  const table = data[0]?.league.standings?.[0] ?? [];
-  return table
+  const tables = data[0]?.league.standings ?? [];
+  return tables
+    .flat()
     .filter((row) => validPositiveId(row?.team?.id) && validName(row?.team?.name))
     .map((row) => ({
       rank: row.rank,
       team: row.team,
       points: row.points,
       goalsDiff: row.goalsDiff,
-      form: row.form,
+      group: row.group ?? null,
+      form: row.form ?? null,
+      status: row.status ?? null,
+      description: row.description ?? null,
       played: row.all.played,
       win: row.all.win,
       draw: row.all.draw,
       lose: row.all.lose,
       goalsFor: row.all.goals.for,
       goalsAgainst: row.all.goals.against,
+      home: {
+        played: row.home.played,
+        win: row.home.win,
+        draw: row.home.draw,
+        lose: row.home.lose,
+        goalsFor: row.home.goals.for,
+        goalsAgainst: row.home.goals.against,
+      },
+      away: {
+        played: row.away.played,
+        win: row.away.win,
+        draw: row.away.draw,
+        lose: row.away.lose,
+        goalsFor: row.away.goals.for,
+        goalsAgainst: row.away.goals.against,
+      },
+      update: row.update ?? null,
     }));
 }
 
