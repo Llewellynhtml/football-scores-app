@@ -415,6 +415,13 @@ button, input, select { font: inherit; }
   line-height: 1.1;
 }
 
+.leagueCountryLine {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 14px;
+}
+
 .leagueTitle h3 {
   margin: 2px 0 0;
   font-size: 12px;
@@ -486,6 +493,27 @@ button, input, select { font: inherit; }
 .team.away {
   justify-content: flex-end;
   text-align: right;
+}
+
+.winnerTeam {
+  color: var(--accent-strong);
+}
+
+.winnerIndicator {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 6px;
+  border: 1px solid #b8dfc6;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 .score {
@@ -705,6 +733,16 @@ button, input, select { font: inherit; }
 
 .matchFacts span { font-size: 10px; color: var(--muted); }
 .matchFacts strong { font-size: 12px; }
+
+.matchLeagueEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.heroWinner {
+  margin-top: -3px;
+}
 
 .sportsIntro { font-size: 16px; }
 
