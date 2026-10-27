@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { RugbyGameList } from "@/components/RugbyGameList";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { SiteHeader } from "@/components/SiteHeader";
-import { dateInSouthAfrica, prettyDate } from "@/lib/dates";
+import { dateInUtc } from "@/lib/dates";
 import { getRugbyGamesByDate, rugbyConfigured } from "@/sports/rugby/provider";
 import type { RugbyGame } from "@/sports/rugby/types";
 
@@ -11,7 +12,7 @@ export const metadata = {
 };
 
 export default async function RugbyPage() {
-  const date = dateInSouthAfrica();
+  const date = dateInUtc();
 
   let games: RugbyGame[] = [];
   let apiError = false;
@@ -40,7 +41,7 @@ export default async function RugbyPage() {
         <div className="sectionHeading">
           <div>
             <p className="eyebrow">MATCH DAY</p>
-            <h2>{prettyDate(date)}</h2>
+            <h2><LocalDateTime value={date} mode="date" /></h2>
           </div>
           <span className="badge">{apiError ? "—" : games.length} games</span>
         </div>
