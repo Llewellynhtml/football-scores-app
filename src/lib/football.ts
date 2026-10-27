@@ -26,6 +26,12 @@ export type Fixture = {
   };
   home: { id: number; name: string; logo: string; winner: boolean | null; goals: number | null };
   away: { id: number; name: string; logo: string; winner: boolean | null; goals: number | null };
+  scoreBreakdown: {
+    halftime: { home: number | null; away: number | null };
+    fulltime: { home: number | null; away: number | null };
+    extratime: { home: number | null; away: number | null };
+    penalty: { home: number | null; away: number | null };
+  };
 };
 
 export type FixtureCompetition = {
@@ -144,6 +150,12 @@ type ApiFootballFixture = {
     away: { id: number; name: string; logo: string; winner: boolean | null };
   };
   goals: { home: number | null; away: number | null };
+  score: {
+    halftime: { home: number | null; away: number | null };
+    fulltime: { home: number | null; away: number | null };
+    extratime: { home: number | null; away: number | null };
+    penalty: { home: number | null; away: number | null };
+  };
 };
 
 type ApiStanding = {
@@ -266,6 +278,14 @@ function mapFixture(item: ApiFootballFixture): Fixture | null {
     || !validName(item?.teams?.away?.name)
     || !validNullableScore(item?.goals?.home)
     || !validNullableScore(item?.goals?.away)
+    || !validNullableScore(item?.score?.halftime?.home)
+    || !validNullableScore(item?.score?.halftime?.away)
+    || !validNullableScore(item?.score?.fulltime?.home)
+    || !validNullableScore(item?.score?.fulltime?.away)
+    || !validNullableScore(item?.score?.extratime?.home)
+    || !validNullableScore(item?.score?.extratime?.away)
+    || !validNullableScore(item?.score?.penalty?.home)
+    || !validNullableScore(item?.score?.penalty?.away)
   ) return null;
 
   return {
@@ -290,6 +310,24 @@ function mapFixture(item: ApiFootballFixture): Fixture | null {
     },
     home: { ...item.teams.home, winner: item.teams.home.winner ?? null, goals: item.goals.home },
     away: { ...item.teams.away, winner: item.teams.away.winner ?? null, goals: item.goals.away },
+    scoreBreakdown: {
+      halftime: {
+        home: item.score?.halftime?.home ?? null,
+        away: item.score?.halftime?.away ?? null,
+      },
+      fulltime: {
+        home: item.score?.fulltime?.home ?? null,
+        away: item.score?.fulltime?.away ?? null,
+      },
+      extratime: {
+        home: item.score?.extratime?.home ?? null,
+        away: item.score?.extratime?.away ?? null,
+      },
+      penalty: {
+        home: item.score?.penalty?.home ?? null,
+        away: item.score?.penalty?.away ?? null,
+      },
+    },
   };
 }
 
