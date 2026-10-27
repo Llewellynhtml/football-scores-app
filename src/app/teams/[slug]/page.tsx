@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SafeLogo } from "@/components/SafeLogo";
+import { SafeMedia } from "@/components/SafeMedia";
 import { notFound } from "next/navigation";
 import { MatchList } from "@/components/MatchList";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -82,6 +83,62 @@ export default async function TeamPage({ params }: Props) {
             ) : null}
           </div>
         </div>
+
+        <section className="teamProfileDetails">
+          <div className="teamProfileFacts">
+            <div>
+              <span>Team code</span>
+              <strong>{team.code ?? "—"}</strong>
+            </div>
+            <div>
+              <span>National team</span>
+              <strong className={team.national ? "teamFlagState active" : "teamFlagState"}>
+                {team.national ? "Yes" : "No"}
+              </strong>
+            </div>
+            <div>
+              <span>Founded</span>
+              <strong>{team.founded ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Country</span>
+              <strong>{team.country}</strong>
+            </div>
+            <div>
+              <span>Stadium</span>
+              <strong>{team.venue?.name ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Address</span>
+              <strong>{team.venue?.address ?? "—"}</strong>
+            </div>
+            <div>
+              <span>City</span>
+              <strong>{team.venue?.city ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Capacity</span>
+              <strong>{team.venue?.capacity?.toLocaleString("en-ZA") ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Surface</span>
+              <strong>{team.venue?.surface ?? "—"}</strong>
+            </div>
+          </div>
+
+          {team.venue?.image ? (
+            <div className="teamVenueCard">
+              <SafeMedia src={team.venue.image} alt={team.venue.name ?? `${team.name} stadium`} />
+              <div className="teamVenueCaption">
+                <div>
+                  <p className="eyebrow">HOME VENUE</p>
+                  <h2>{team.venue.name ?? "Stadium"}</h2>
+                </div>
+                <span>{[team.venue.city, team.venue.capacity ? `${team.venue.capacity.toLocaleString("en-ZA")} capacity` : null].filter(Boolean).join(" · ")}</span>
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         <div className="sectionHeading compactHeading">
           <div><p className="eyebrow">NEXT MATCHES</p><h2>Upcoming fixtures</h2></div>
