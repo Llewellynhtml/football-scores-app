@@ -24,7 +24,7 @@ function configuredFreeSeason() {
 
 export const FOOTBALL_DATA_MODE = normalizedMode();
 export const FOOTBALL_FREE_SEASON = configuredFreeSeason();
-export const FOOTBALL_SOURCE_TIMEZONE = "UTC";
+export const FOOTBALL_SOURCE_TIMEZONE = (process.env.FOOTBALL_SOURCE_TIMEZONE ?? "UTC").trim() || "UTC";
 
 export function selectFootballSeason<T extends SeasonLike>(seasons: T[]): T | undefined {
   if (!seasons.length) return undefined;
