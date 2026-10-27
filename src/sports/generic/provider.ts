@@ -304,10 +304,10 @@ export async function getEventsByDate(slug: string, date: string): Promise<Event
   let normalized: UnifiedSportEvent[] = [];
 
   if (MATCH_SPORTS.has(slug)) {
-    const raw = await apiArray(slug, "/games", { date, timezone: "Africa/Johannesburg" });
+    const raw = await apiArray(slug, "/games", { date, timezone: "UTC" });
     normalized = raw.map((item) => normalizeMatch(slug, item));
   } else if (slug === "mma") {
-    const raw = await apiArray(slug, "/fights", { date, timezone: "Africa/Johannesburg" });
+    const raw = await apiArray(slug, "/fights", { date, timezone: "UTC" });
     normalized = raw.map(normalizeMma);
   } else if (slug === "formula-1") {
     const season = Number(date.slice(0, 4));
