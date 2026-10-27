@@ -1,4 +1,5 @@
 import { SafeLogo } from "@/components/SafeLogo";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import type { UnifiedSportEvent } from "@/sports/generic/types";
 
 const LIVE = new Set(["LIVE", "Q1", "Q2", "Q3", "Q4", "HT", "OT", "P1", "P2", "P3", "IN", "PF", "EOR", "IN1", "IN2", "IN3", "IN4", "IN5", "IN6", "IN7", "IN8", "IN9"]);
@@ -6,19 +7,7 @@ const LIVE = new Set(["LIVE", "Q1", "Q2", "Q3", "Q4", "HT", "OT", "P1", "P2", "P
 function eventTime(event: UnifiedSportEvent) {
   if (LIVE.has(event.status)) return event.status;
   if (event.status === "FT" || event.status === "AOT" || event.status === "AP") return "FT";
-  if (event.time) return event.time;
-  if (event.date.includes("T")) {
-    try {
-      return new Intl.DateTimeFormat("en-ZA", {
-        timeZone: "Africa/Johannesburg",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(event.date));
-    } catch {
-      return event.status;
-    }
-  }
-  return event.status;
+  return event.time ?? event.status;
 }
 
 export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]; icon: string }) {
@@ -61,7 +50,7 @@ export function GenericEventList({ events, icon }: { events: UnifiedSportEvent[]
                 <article className={isLive ? "eventRow singleEvent liveRow" : "eventRow singleEvent"} key={event.id}>
                   <div className={isLive ? "matchMeta liveMeta" : "matchMeta"}>
                     {isLive ? <span className="liveDot" /> : null}
-                    <span>{eventTime(event)}</span>
+                    <span>{event.date.includes("T") && !LIVE.has(event.status) && event.status !== "FT" && event.status !== "AOT" && event.status !== "AP" ? <LocalDateTime value={event.date} mode="time" /> : eventTime(event)}</span>
                   </div>
                   <div className="eventTitle">
                     <strong>{event.title ?? event.competition}</strong>
