@@ -1,10 +1,11 @@
 import { CompetitionFilter } from "@/components/CompetitionFilter";
 import { FootballSidebar } from "@/components/FootballSidebar";
 import { MatchList } from "@/components/MatchList";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { SiteHeader } from "@/components/SiteHeader";
 import { StatusFilter } from "@/components/StatusFilter";
-import { dateInSouthAfrica, prettyDate } from "@/lib/dates";
 import { competitionsFromFixtures, getFixturesByDate, type Fixture } from "@/lib/football";
+import { footballDataContext, footballQueryDate } from "@/lib/football-config";
 import { slugify } from "@/lib/slug";
 
 type PageProps = {
@@ -17,7 +18,8 @@ const SCHEDULED_STATUSES = new Set(["NS", "TBD"]);
 
 export default async function Home({ searchParams }: PageProps) {
   const query = await searchParams;
-  const date = dateInSouthAfrica();
+  const date = footballQueryDate();
+  const dataContext = footballDataContext();
   const status = ["live", "finished", "scheduled"].includes(query.status ?? "")
     ? query.status!
     : "all";
@@ -64,7 +66,7 @@ export default async function Home({ searchParams }: PageProps) {
             <div>
               <p className="eyebrow">FOOTBALL</p>
               <h1>Scores & fixtures</h1>
-              <p>{prettyDate(date)} · South Africa time</p>
+              <p><LocalDateTime value={date} mode="date" /> · Your local time</p>
             </div>
             <div className="scoreboardMetric">
               <span>{apiError ? "—" : fixtures.length}</span>
@@ -73,6 +75,12 @@ export default async function Home({ searchParams }: PageProps) {
           </section>
 
           <section className="scorePanel">
+            {dataContext.isHistoricalDevelopmentData ? (
+              <div className="notice">
+                Free-plan development mode is using season {dataContext.freeSeason} data. Visitor times are shown in each viewer&apos;s local timezone.
+              </div>
+            ) : null}
+
             {!process.env.API_FOOTBALL_KEY && !process.env.API_SPORTS_KEY ? (
               <div className="notice">
                 API integration is ready. Add the API-Sports key in Hostinger environment variables to load football data.
