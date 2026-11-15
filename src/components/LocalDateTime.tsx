@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Mode = "time" | "date" | "datetime";
+
+// The server and hydration render use UTC. After hydration, React reads the
+// browser snapshot and formats using the visitor's locale and timezone.
+const subscribe = () => () => {};
+const getServerSnapshot = () => false;
+const getClientSnapshot = () => true;
 
 function asDate(value: string | number) {
   if (typeof value === "number") return new Date(value * 1000);
@@ -33,22 +39,12 @@ export function LocalDateTime({
   value: string | number;
   mode?: Mode;
 }) {
-  const fallback = useMemo(() => format(value, mode, false), [value, mode]);
-  const [text, setText] = useState(fallback);
-
-  useEffect(() => {
-    setText(format(value, mode, true));
-  }, [value, mode]);
-
-  return <time dateTime={typeof value === "string" ? value : new Date(value * 1000).toISOString()}>{text}</time>;
+  const local = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  const date = asDate(value);
+  return <time dateTime={Number.isNaN(date.getTime()) ? undefined : date.toISOString()}>{format(value, mode, local)}</time>;
 }
 
 export function LocalTimezoneLabel() {
-  const [timezone, setTimezone] = useState("UTC");
-
-  useEffect(() => {
-    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
-  }, []);
-
-  return <>{timezone}</>;
+  const local = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  return <>{local ? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") : "UTC"}</>;
 }
