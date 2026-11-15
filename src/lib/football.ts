@@ -391,7 +391,7 @@ async function apiGet<T>(
   revalidate: number,
 ): Promise<T[]> {
   const key = process.env.API_FOOTBALL_KEY ?? process.env.API_SPORTS_KEY;
-  if (!key) return [];
+  if (!key) throw new Error("API-Football is not configured");
 
   const url = new URL(pathname, BASE_URL);
   Object.entries(params).forEach(([keyName, value]) => {
@@ -401,6 +401,7 @@ async function apiGet<T>(
   const response = await fetch(url, {
     headers: { "x-apisports-key": key },
     next: { revalidate },
+    signal: AbortSignal.timeout(12000),
   });
 
   recordProviderResponse(response.headers);
@@ -420,7 +421,10 @@ async function apiGet<T>(
   }
 
   if (typeof data.results === "number" && data.results === 0) return [];
-  return Array.isArray(data.response) ? data.response : [];
+  if (!Array.isArray(data.response)) {
+    throw new Error(`API-Football returned an invalid response for ${pathname}`);
+  }
+  return data.response;
 }
 
 function mapLineupPlayer(entry: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }): FixtureLineupPlayer {
@@ -650,13 +654,13 @@ export async function getFixturesByDate(date: string): Promise<Fixture[]> {
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     { date, timezone: TIMEZONE },
-    1800,
+    FOOTBALL_DATA_MODE === "current" ? 60 : 1800,
   );
   return validFixtures(data);
 }
 
 export async function getFixtureById(id: number): Promise<Fixture | null> {
-  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, 900);
+  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, FOOTBALL_DATA_MODE === "current" ? 60 : 900);
   return data[0] ? mapFixture(data[0]) : null;
 }
 
