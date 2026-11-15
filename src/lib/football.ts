@@ -1,6 +1,7 @@
 import { shiftDate } from "@/lib/dates";
 import { FOOTBALL_DATA_MODE, FOOTBALL_FREE_SEASON, FOOTBALL_SOURCE_TIMEZONE, footballQueryDate, selectFootballSeason } from "@/lib/football-config";
 import { recordProviderResponse } from "@/lib/api-usage";
+import { cacheKey, readCached, writeCached, recordDurableUsage } from "@/lib/football-persistence";
 import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
 import { slugify } from "@/lib/slug";
 
@@ -398,33 +399,65 @@ async function apiGet<T>(
     if (value !== undefined) url.searchParams.set(keyName, String(value));
   });
 
-  const response = await fetch(url, {
-    headers: { "x-apisports-key": key },
-    next: { revalidate },
-    signal: AbortSignal.timeout(12000),
-  });
-
-  recordProviderResponse(response.headers);
-
-  if (!response.ok) {
-    throw new Error(
-      `API-Football request failed: endpoint=${pathname} status=${response.status} params=${JSON.stringify(params)}`,
-    );
+  const persist = process.env.FOOTBALL_PERSISTENCE_ENABLED === "true";
+  const cacheId = cacheKey(pathname, params, FOOTBALL_DATA_MODE);
+  if (persist) {
+    try {
+      const cached = await readCached(cacheId);
+      if (cached) return cached.response as T[];
+    } catch (error) {
+      console.error("Persistent football cache read failed", error);
+    }
   }
 
-  const data = (await response.json()) as ApiResponse<T>;
-  const providerError = apiErrorDetail(data.errors);
-  if (providerError) {
-    throw new Error(
-      `API-Football provider error: endpoint=${pathname} params=${JSON.stringify(params)} errors=${providerError}`,
-    );
-  }
+  try {
+    const response = await fetch(url, {
+      headers: { "x-apisports-key": key },
+      next: { revalidate },
+      signal: AbortSignal.timeout(12000),
+    });
 
-  if (typeof data.results === "number" && data.results === 0) return [];
-  if (!Array.isArray(data.response)) {
-    throw new Error(`API-Football returned an invalid response for ${pathname}`);
+    recordProviderResponse(response.headers);
+    if (persist) {
+      try { await recordDurableUsage(response.status, response.headers); }
+      catch (error) { console.error("Football usage persistence failed", error); }
+    }
+
+    if (!response.ok) {
+      throw new Error(`API-Football request failed: endpoint=${pathname} status=${response.status} params=${JSON.stringify(params)}`);
+    }
+
+    const data = (await response.json()) as ApiResponse<T>;
+    const providerError = apiErrorDetail(data.errors);
+    if (providerError) {
+      throw new Error(`API-Football provider error: endpoint=${pathname} params=${JSON.stringify(params)} errors=${providerError}`);
+    }
+
+    if (typeof data.results === "number" && data.results === 0 && !Array.isArray(data.response)) {
+      data.response = [];
+    }
+    if (!Array.isArray(data.response)) {
+      throw new Error(`API-Football returned an invalid response for ${pathname}`);
+    }
+    if (persist) {
+      try { await writeCached(cacheId, data.response, revalidate); }
+      catch (error) { console.error("Persistent football cache write failed", error); }
+    }
+    return data.response;
+  } catch (error) {
+    if (persist) {
+      try {
+        const cached = await readCached(cacheId, true);
+        if (cached) {
+          console.warn("Serving stale football provider data", { pathname });
+          return cached.response as T[];
+        }
+      } catch (cacheError) {
+        console.error("Persistent football stale fallback failed", cacheError);
+      }
+    }
+    throw error;
   }
-  return data.response;
 }
 
 function mapLineupPlayer(entry: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }): FixtureLineupPlayer {
