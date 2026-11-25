@@ -86,6 +86,8 @@ test("CI-11 workflow separates migration and runtime database users", () => {
 
 test("CI-12 dependency, migration, adapter and workflow verification are invoked", () => {
   assert.equal(packageJson.dependencies.mysql2, "^3.24.6");
+  assert.equal(packageJson.dependencies["server-only"], "0.0.1");
   assert.ok(packageLock.packages["node_modules/mysql2"]);
+  assert.equal(packageLock.packages["node_modules/server-only"]?.version, "0.0.1");
   for (const command of ["npm ci", "npm run db:mariadb:migrate", "npm run test:mariadb:adapter", "npm run test:mariadb:load", "npm run test:mariadb:restore"]) assert.match(workflow, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });
