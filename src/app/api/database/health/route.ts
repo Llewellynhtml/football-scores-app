@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { getSupabaseConfig } from "@/lib/supabase";
+import { databaseProvider, persistentDatabaseConfigured } from "@/lib/database";
 
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  const config = getSupabaseConfig();
-
   return NextResponse.json({
     ok: true,
-    service: "supabase",
-    configured: config.configured,
-    urlConfigured: Boolean(config.url),
-    keyConfigured: Boolean(config.anonKey),
+    service: databaseProvider(),
+    configured: persistentDatabaseConfigured(),
+    connectivityVerified: false,
     timestamp: new Date().toISOString(),
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
 }

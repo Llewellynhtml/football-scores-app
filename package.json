@@ -9,13 +9,26 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "cron:warm": "node scripts/warm-cache.mjs",
-    "test": "node --test src/lib/*.test.mjs"
+    "mock:football": "node scripts/mock-api-football.mjs",
+    "test:phase1d:concurrency": "node scripts/test-phase1d-concurrency.mjs",
+    "db:mariadb:migrate": "node scripts/mariadb-migrate.mjs",
+    "db:mariadb:validate": "node scripts/validate-mariadb-local.mjs",
+    "db:mariadb:maintenance": "node scripts/mariadb-maintenance.mjs",
+    "db:mariadb:capacity": "node scripts/mariadb-capacity.mjs",
+    "test:mariadb:integration": "node scripts/test-mariadb-integration.mjs",
+    "test:mariadb:adapter": "node --conditions=react-server --import tsx scripts/test-mariadb-adapter.mts",
+    "test:mariadb:load": "node scripts/load-test-mariadb.mjs",
+    "test:mariadb:restore": "node scripts/verify-mariadb-restore.mjs",
+    "test:mariadb:persistence": "node scripts/verify-mariadb-persistence.mjs",
+    "test:mariadb:outage": "node scripts/verify-mariadb-persistence.mjs --outage",
+    "test": "tsx --test src/lib/*.test.mjs"
   },
   "dependencies": {
-    "next": "16.4.3",
+    "@supabase/supabase-js": "^2.0.0",
+    "mysql2": "^3.24.6",
+    "next": "^16.4.6",
     "react": "19.3.1",
-    "react-dom": "19.3.1",
-    "@supabase/supabase-js": "^2.0.0"
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -23,6 +36,7 @@
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.4.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.0"
   },
   "engines": {

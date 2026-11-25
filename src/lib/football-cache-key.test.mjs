@@ -16,3 +16,8 @@ test("cache key isolates data modes", () => {
 test("cache key ignores undefined parameters", () => {
   assert.equal(cacheKey("/fixtures",{league:39,season:undefined},"free"),cacheKey("/fixtures",{league:39},"free"));
 });
+test("cache key isolates provider and response schema namespaces", () => {
+  const params = { league: 39, season: 2026 };
+  assert.notEqual(cacheKey("/fixtures", params, '{"schema":1,"origin":"prod"}'), cacheKey("/fixtures", params, '{"schema":2,"origin":"prod"}'));
+  assert.notEqual(cacheKey("/fixtures", params, '{"schema":2,"origin":"prod"}'), cacheKey("/fixtures", params, '{"schema":2,"origin":"mock"}'));
+});

@@ -12,6 +12,7 @@ export function getSupabaseConfig() {
   );
 
   const anonKey = firstDefined(
+    process.env.SUPABASE_PUBLISHABLE_KEY,
     process.env.SUPABASE_ANON_KEY,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     process.env.SUPABASE_KEY,
@@ -25,6 +26,7 @@ export function getSupabaseConfig() {
 }
 
 let client: SupabaseClient | null = null;
+let serviceRoleClient: SupabaseClient | null = null;
 
 export function getSupabaseServerClient() {
   const config = getSupabaseConfig();
@@ -44,4 +46,18 @@ export function getSupabaseServerClient() {
   }
 
   return client;
+}
+
+export function getSupabaseServiceRoleClient() {
+  const url = firstDefined(process.env.SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const serviceRoleKey = firstDefined(process.env.SUPABASE_SECRET_KEY, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!url || !serviceRoleKey) {
+    throw new Error("Supabase service-role environment variables are not configured.");
+  }
+  if (!serviceRoleClient) {
+    serviceRoleClient = createClient(url, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+  }
+  return serviceRoleClient;
 }

@@ -1,0 +1,267 @@
+name: MariaDB integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feat/phase1b-persistent-football-cache"]
+  pull_request:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/mariadb-integration.yml"
+      - "mariadb/**"
+      - "scripts/**mariadb*"
+      - "scripts/mock-api-football.mjs"
+      - "src/lib/database/**"
+      - "src/lib/football*.ts"
+      - "src/lib/api-usage.ts"
+      - "src/lib/usage-queue.ts"
+      - "src/app/api/usage/route.ts"
+      - "package.json"
+      - "package-lock.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mariadb-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mariadb-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      mariadb:
+        image: mariadb:11.8.9-ubi9
+        env:
+          MARIADB_ROOT_PASSWORD: ci-root-only
+          MARIADB_DATABASE: football_scores_test_ci
+        ports:
+          - "127.0.0.1:3306:3306"
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -u root -pci-root-only --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+          --cpus=2
+          --memory=3g
+    env:
+      CI: "true"
+      MARIADB_ISOLATED_DATABASE: "true"
+      MARIADB_EXPECT_SCHEMA: "false"
+      DATABASE_PROVIDER: mysql
+      FOOTBALL_PERSISTENCE_ENABLED: "true"
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: football_scores_test_ci
+      MYSQL_USER: football_runtime
+      MYSQL_PASSWORD: ci-runtime-only
+      MYSQL_CONNECTION_LIMIT: "5"
+      MYSQL_MAX_IDLE: "2"
+      MYSQL_IDLE_TIMEOUT_MS: "10000"
+      MYSQL_QUEUE_LIMIT: "50"
+      MYSQL_CONNECT_TIMEOUT_MS: "5000"
+      MYSQL_ACQUIRE_TIMEOUT_MS: "5000"
+      MYSQL_LOCK_WAIT_TIMEOUT_SECONDS: "5"
+      API_FOOTBALL_BASE_URL: http://127.0.0.1:4310
+      API_FOOTBALL_KEY: integration-test-key
+      API_SPORTS_KEY: integration-test-key
+      FOOTBALL_QUOTA_SCOPE: mariadb-m3-ci
+      FOOTBALL_DAILY_REQUEST_LIMIT: "100"
+      FOOTBALL_QUOTA_RESERVE: "0"
+      FOOTBALL_PER_MINUTE_REQUEST_LIMIT: "100"
+      FOOTBALL_PER_MINUTE_RESERVE: "0"
+      FOOTBALL_FIXED_DATE_UTC: "2026-11-25"
+      CRON_SECRET: ci-local-diagnostics
+      MARIADB_LOAD_CRON_SECRET: ci-local-diagnostics
+      MARIADB_LOAD_APP_URLS: http://127.0.0.1:3213,http://127.0.0.1:3214
+      MARIADB_LOAD_MOCK_URL: http://127.0.0.1:4310
+      MARIADB_LOAD_REQUESTS: "200"
+      MARIADB_LOAD_WARM_REQUESTS: "40"
+      MARIADB_LOAD_CONCURRENCY: "10"
+      MARIADB_LOAD_PATH: /api/fixtures?date=2026-11-25
+      MARIADB_LOAD_MAX_PROVIDER_REQUESTS: "1"
+      MARIADB_DATABASE_CAPACITY_MB: "3072"
+      MARIADB_CAPACITY_WARNING_PERCENT: "60"
+      MARIADB_CAPACITY_ALERT_PERCENT: "70"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Prepare sanitized reports
+        run: mkdir -p artifacts/mariadb
+
+      - name: Configure simulated Hostinger server settings
+        env:
+          SERVICE_ID: ${{ job.services.mariadb.id }}
+        run: |
+          set -euo pipefail
+          docker exec "$SERVICE_ID" mariadb -u root -pci-root-only -e "SET GLOBAL wait_timeout=20; SET GLOBAL transaction_isolation='READ-COMMITTED'; SET GLOBAL time_zone='+00:00'; SET GLOBAL sql_mode='STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"
+          docker exec "$SERVICE_ID" mariadb -u root -pci-root-only -e "CREATE USER 'football_migrator'@'%' IDENTIFIED BY 'ci-migrator-only'; CREATE USER 'football_runtime'@'%' IDENTIFIED BY 'ci-runtime-only'; GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,INDEX,DROP ON football_scores_test_ci.* TO 'football_migrator'@'%'; GRANT SELECT,INSERT,UPDATE,DELETE ON football_scores_test_ci.* TO 'football_runtime'@'%'; FLUSH PRIVILEGES;"
+          docker exec "$SERVICE_ID" mariadb -u root -pci-root-only -N -e "SELECT VERSION(),@@global.wait_timeout,@@global.transaction_isolation,@@global.time_zone,@@global.sql_mode;" | tee artifacts/mariadb/server-configuration.txt
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Static verification
+        run: |
+          set -euo pipefail
+          npm run lint 2>&1 | tee artifacts/mariadb/lint.txt
+          npm run typecheck 2>&1 | tee artifacts/mariadb/typecheck.txt
+          npm test 2>&1 | tee artifacts/mariadb/unit-tests.txt
+          npm audit --audit-level=high 2>&1 | tee artifacts/mariadb/dependency-audit.txt
+          git diff --check
+
+      - name: Pre-migration identity and session validation
+        env:
+          MYSQL_USER: football_migrator
+          MYSQL_PASSWORD: ci-migrator-only
+        run: |
+          set -euo pipefail
+          npm run db:mariadb:validate 2>&1 | tee artifacts/mariadb/pre-migration-validation.txt
+
+      - name: Apply migrations
+        env:
+          MYSQL_USER: football_migrator
+          MYSQL_PASSWORD: ci-migrator-only
+        run: |
+          set -euo pipefail
+          npm run db:mariadb:migrate 2>&1 | tee artifacts/mariadb/migrations.txt
+
+      - name: Post-migration schema validation
+        env:
+          MARIADB_EXPECT_SCHEMA: "true"
+        run: |
+          set -euo pipefail
+          npm run db:mariadb:validate 2>&1 | tee artifacts/mariadb/post-migration-validation.txt
+
+      - name: Direct database and adapter integration tests
+        run: |
+          set -euo pipefail
+          npm run test:mariadb:integration 2>&1 | tee artifacts/mariadb/integration.txt
+          npm run test:mariadb:adapter 2>&1 | tee artifacts/mariadb/adapter-contract.txt
+          npm run db:mariadb:capacity 2>&1 | tee artifacts/mariadb/capacity-before-load.json
+
+      - name: Build against loopback mock only
+        env:
+          FOOTBALL_QUOTA_SCOPE: mariadb-m3-build
+        run: |
+          set -euo pipefail
+          setsid npm run mock:football > artifacts/mariadb/mock-build.log 2>&1 &
+          MOCK_PID=$!
+          trap 'kill -- -"$MOCK_PID" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            curl --fail --silent --max-time 2 http://127.0.0.1:4310/__health >/dev/null && break
+            test "$attempt" -lt 30
+            sleep 1
+          done
+          npm run build 2>&1 | tee artifacts/mariadb/build.txt
+
+      - name: Reset disposable data after build
+        env:
+          SERVICE_ID: ${{ job.services.mariadb.id }}
+        run: |
+          set -euo pipefail
+          docker exec "$SERVICE_ID" mariadb -u root -pci-root-only football_scores_test_ci -e "DELETE FROM football_provider_cache; DELETE FROM football_cache_leases; DELETE FROM football_api_attempts; DELETE FROM football_api_usage_daily; DELETE FROM football_quota_locks;"
+
+      - name: Two-instance concurrency, load, restart, and outage recovery
+        env:
+          SERVICE_ID: ${{ job.services.mariadb.id }}
+        run: |
+          set -euo pipefail
+          setsid npm run mock:football > artifacts/mariadb/mock-load.log 2>&1 &
+          MOCK_PID=$!
+          APP_INSTANCE_ID=ci-3213 setsid npm run start -- -p 3213 > artifacts/mariadb/app-3213.log 2>&1 &
+          APP1_PID=$!
+          APP_INSTANCE_ID=ci-3214 setsid npm run start -- -p 3214 > artifacts/mariadb/app-3214.log 2>&1 &
+          APP2_PID=$!
+          cleanup() {
+            docker start "$SERVICE_ID" >/dev/null 2>&1 || true
+            kill -- -"$APP1_PID" -"$APP2_PID" >/dev/null 2>&1 || true
+            kill -- -"$MOCK_PID" >/dev/null 2>&1 || true
+            wait "$APP1_PID" "$APP2_PID" "$MOCK_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for attempt in {1..30}; do
+            curl --fail --silent --max-time 2 http://127.0.0.1:4310/__health >/dev/null && break
+            test "$attempt" -lt 30
+            sleep 1
+          done
+          for port in 3213 3214; do
+            for attempt in {1..60}; do
+              curl --fail --silent "http://127.0.0.1:${port}/api/health" >/dev/null && break
+              test "$attempt" -lt 60
+              sleep 1
+            done
+          done
+          npm run test:mariadb:load 2>&1 | tee artifacts/mariadb/load.json
+          OLD_APP1_PID=$APP1_PID
+          OLD_APP2_PID=$APP2_PID
+          kill -- -"$APP1_PID" -"$APP2_PID"
+          wait "$APP1_PID" "$APP2_PID" || true
+          if curl --max-time 2 --fail --silent http://127.0.0.1:3213/api/health >/dev/null || curl --max-time 2 --fail --silent http://127.0.0.1:3214/api/health >/dev/null; then
+            echo "A terminated application process is still serving traffic" >&2
+            exit 1
+          fi
+          APP_INSTANCE_ID=ci-3213-restarted setsid npm run start -- -p 3213 > artifacts/mariadb/app-restart.log 2>&1 &
+          APP1_PID=$!
+          APP2_PID=$APP1_PID
+          test "$APP1_PID" != "$OLD_APP1_PID"
+          test "$APP1_PID" != "$OLD_APP2_PID"
+          for attempt in {1..60}; do
+            curl --fail --silent http://127.0.0.1:3213/api/health >/dev/null && break
+            test "$attempt" -lt 60
+            sleep 1
+          done
+          npm run test:mariadb:persistence 2>&1 | tee artifacts/mariadb/restart-persistence.json
+          docker exec "$SERVICE_ID" mariadb -u root -pci-root-only football_scores_test_ci -e "DELETE FROM football_provider_cache; DELETE FROM football_cache_leases; DELETE FROM football_api_attempts; DELETE FROM football_api_usage_daily; DELETE FROM football_quota_locks;"
+          curl --fail --silent --max-time 2 -X POST http://127.0.0.1:4310/__reset >/dev/null
+          docker stop --time 1 "$SERVICE_ID" >/dev/null
+          npm run test:mariadb:outage 2>&1 | tee artifacts/mariadb/outage-controlled-error.json
+          docker start "$SERVICE_ID" >/dev/null
+          for attempt in {1..60}; do
+            docker exec "$SERVICE_ID" mariadb-admin ping -h 127.0.0.1 -u root -pci-root-only --silent && break
+            test "$attempt" -lt 60
+            sleep 1
+          done
+          npm run db:mariadb:validate >/dev/null
+          npm run test:mariadb:persistence 2>&1 | tee artifacts/mariadb/outage-recovery.json
+          npm run db:mariadb:capacity 2>&1 | tee artifacts/mariadb/capacity-after-load.json
+
+      - name: Logical backup, isolated restore, and validation
+        env:
+          SERVICE_ID: ${{ job.services.mariadb.id }}
+          MARIADB_RESTORE_DATABASE: football_scores_test_restore_ci
+        run: |
+          set -euo pipefail
+          BACKUP_FILE="${RUNNER_TEMP}/football_scores_test_ci.sql"
+          docker exec "$SERVICE_ID" mariadb-dump -u root -pci-root-only --single-transaction --skip-comments football_scores_test_ci > "$BACKUP_FILE"
+          docker exec "$SERVICE_ID" mariadb -u root -pci-root-only -e "DROP DATABASE IF EXISTS football_scores_test_restore_ci; CREATE DATABASE football_scores_test_restore_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;"
+          docker exec -i "$SERVICE_ID" mariadb -u root -pci-root-only football_scores_test_restore_ci < "$BACKUP_FILE"
+          MYSQL_USER=root MYSQL_PASSWORD=ci-root-only npm run test:mariadb:restore 2>&1 | tee artifacts/mariadb/backup-restore.json
+          rm -f "$BACKUP_FILE"
+
+      - name: Write remaining blockers
+        if: always()
+        run: |
+          printf '%s\n' \
+            'Remote CI results do not establish Hostinger IOPS or latency.' \
+            'Hosted database capacity, backup retention/granularity, and restore behavior remain unverified.' \
+            'Hosted staging with synthetic provider traffic is still required before production approval.' \
+            > artifacts/mariadb/remaining-production-blockers.txt
+
+      - name: Upload sanitized MariaDB reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mariadb-integration-${{ github.run_id }}
+          path: artifacts/mariadb/
+          if-no-files-found: error
+          retention-days: 14
