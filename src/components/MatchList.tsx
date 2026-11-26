@@ -3,8 +3,7 @@ import { SafeLogo } from "@/components/SafeLogo";
 import { LocalDateTime, LocalTimezoneLabel } from "@/components/LocalDateTime";
 import type { Fixture } from "@/lib/football";
 import { matchUrl, slugify, teamUrl } from "@/lib/slug";
-
-const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE"]);
+import { isLiveFixtureStatus } from "@/lib/football-status";
 
 function displayStatus(match: Fixture) {
   if (match.status === "FT") return "FT";
@@ -62,12 +61,13 @@ export function MatchList({ fixtures }: { fixtures: Fixture[] }) {
             </div>
 
             {matches.map((match) => {
-              const live = LIVE_STATUSES.has(match.status);
+              const live = isLiveFixtureStatus(match.status);
               return (
                 <article className={live ? "matchRow liveRow" : "matchRow"} key={match.id}>
                   <div className={live ? "matchMeta liveMeta" : "matchMeta"}>
                     {live ? <span className="liveDot" /> : null}
                     <span>{match.status === "NS" ? <LocalDateTime value={match.date} mode="time" /> : displayStatus(match)}</span>
+                    {match.freshness?.state === "stale" ? <span title="Provider refresh is temporarily unavailable">Delayed data</span> : null}
                   </div>
 
                   <Link className={match.home.winner ? "team winnerTeam" : "team"} href={teamUrl(match.home.name)} prefetch={false}>

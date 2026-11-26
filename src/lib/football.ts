@@ -1,8 +1,16 @@
 import { shiftDate } from "@/lib/dates";
-import { FOOTBALL_DATA_MODE, FOOTBALL_FREE_SEASON, FOOTBALL_SOURCE_TIMEZONE, footballQueryDate, selectFootballSeason } from "@/lib/football-config";
-import { recordProviderResponse } from "@/lib/api-usage";
+import { FOOTBALL_DATA_MODE, FOOTBALL_FREE_SEASON, FOOTBALL_SOURCE_TIMEZONE, fixtureDateAllowed, footballCacheNamespace, footballQueryDate, selectFootballSeason } from "@/lib/football-config";
+import { getApiUsage, recordDiagnostic, recordProviderAttempt, recordProviderOutcome, setUsageQueueDiagnostics } from "@/lib/api-usage";
+import { acquireCacheLease, cacheKey, footballQuotaScope, markProviderAttemptDispatched, persistenceEnabled, persistUsageEvent, readCached, writeCached, recordDurableUsage, releaseCacheLease, reserveProviderQuota, type QuotaReservationResult } from "@/lib/football-persistence";
+import { cachePolicy } from "@/lib/football-cache";
+import { createUsageQueue } from "@/lib/usage-queue";
+import { isEssentialRequest, quotaAllowsRequest, quotaConfig } from "@/lib/football-quota";
+import { fixtureIdsParameter } from "@/lib/fixture-batching";
+import { isObjectArray } from "@/lib/football-provider-contract";
+import type { RequestFreshness } from "@/lib/football-request";
 import { validDateLike, validName, validNullableScore, validPositiveId } from "@/lib/data-validation";
 import { slugify } from "@/lib/slug";
+import { createFootballRequester } from "@/lib/football-request";
 
 export type FixtureEvent = {
   time: { elapsed: number | null; extra: number | null };
@@ -101,6 +109,7 @@ export type Fixture = {
   lineups: FixtureLineup[];
   statistics: FixtureTeamStatistics[];
   players: FixturePlayerStatistics[];
+  freshness?: RequestFreshness;
 };
 
 export type FixtureCompetition = {
@@ -358,37 +367,69 @@ type ApiLeagueEnvelope = {
   }>;
 };
 
-type ApiResponse<T> = {
-  response?: T[];
-  errors?: unknown;
-  results?: number;
-  paging?: { current?: number; total?: number };
-};
-
 const BASE_URL = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
 const TIMEZONE = FOOTBALL_SOURCE_TIMEZONE;
+const usageQueue = createUsageQueue(
+  persistUsageEvent,
+  {
+    maxSize: Number(process.env.FOOTBALL_USAGE_QUEUE_MAX ?? 100),
+    maxAttempts: Number(process.env.FOOTBALL_USAGE_RETRY_MAX ?? 3),
+    onChange: setUsageQueueDiagnostics,
+  },
+);
 
-function hasApiErrors(errors: unknown) {
-  if (!errors) return false;
-  if (Array.isArray(errors)) return errors.length > 0;
-  if (typeof errors === "object") return Object.keys(errors as Record<string, unknown>).length > 0;
-  if (typeof errors === "string") return errors.trim().length > 0;
-  return false;
-}
-
-function apiErrorDetail(errors: unknown) {
-  if (!hasApiErrors(errors)) return null;
-  try {
-    return typeof errors === "string" ? errors : JSON.stringify(errors);
-  } catch {
-    return String(errors);
-  }
-}
+const footballRequester = createFootballRequester({
+  fetch: (...args) => fetch(...args),
+  readCache: readCached,
+  writeCache: writeCached,
+  acquireLease: acquireCacheLease,
+  releaseLease: releaseCacheLease,
+  reserveQuota: async (attemptId, attemptedAt, essential): Promise<QuotaReservationResult> => {
+    const configured = quotaConfig();
+    const usage = getApiUsage();
+    const config = {
+      ...configured,
+      dailyLimit: configured.enabled ? (usage.providerLimit ? Math.min(configured.dailyLimit, usage.providerLimit) : configured.dailyLimit) : 10_000_000,
+      minuteLimit: configured.enabled ? (usage.providerMinuteLimit ? Math.min(configured.minuteLimit, usage.providerMinuteLimit) : configured.minuteLimit) : 10_000,
+      reserve: configured.enabled ? configured.reserve : 0,
+      minuteReserve: configured.enabled ? configured.minuteReserve : 0,
+    };
+    const locallyAllowed = !configured.enabled || quotaAllowsRequest(usage.providerFetchInvocations, essential, config, usage.recentMinuteAttempts);
+    if (!locallyAllowed) return usage.recentMinuteAttempts >= config.minuteLimit - (essential ? 0 : config.minuteReserve) ? "MINUTE_LIMIT_REACHED" : "DAILY_LIMIT_REACHED";
+    if (!persistenceEnabled()) return "DEGRADED";
+    try { return await reserveProviderQuota(attemptId, attemptedAt, essential, config); }
+    catch { return configured.enabled ? "INVALID_REQUEST" : "DEGRADED"; }
+  },
+  markDispatched: markProviderAttemptDispatched,
+  recordAttempt: () => recordProviderAttempt(),
+  diagnostic: (name) => recordDiagnostic(name === "cache_hit" ? "cacheHits" : name === "stale" ? "staleResponses" : name === "lease_contention" ? "leaseContentions" : "deduplicatedRequests"),
+  recordOutcome: async (outcome, status, headers, attemptId, attemptedAt) => {
+    recordProviderOutcome(outcome, headers, attemptedAt);
+    if (persistenceEnabled()) {
+      try { await recordDurableUsage(outcome, status, headers, attemptId, attemptedAt); }
+      catch {
+        const numberHeader = (name: string) => {
+          const value = headers?.get(name);
+          return value != null && /^\d+$/.test(value) ? Number(value) : null;
+        };
+        usageQueue.enqueue({
+          attemptId, quotaScope: footballQuotaScope(), attemptedAt, outcome, status,
+          providerLimit: numberHeader("x-ratelimit-requests-limit"),
+          providerRemaining: numberHeader("x-ratelimit-requests-remaining"),
+          providerMinuteLimit: numberHeader("x-ratelimit-limit"),
+          providerMinuteRemaining: numberHeader("x-ratelimit-remaining"),
+          quotaObservedAt: headers ? new Date().toISOString() : null,
+        });
+      }
+    }
+  },
+});
 
 async function apiGet<T>(
   pathname: string,
   params: Record<string, string | number | undefined>,
   revalidate: number,
+  onFreshness?: (freshness: RequestFreshness) => void,
 ): Promise<T[]> {
   const key = process.env.API_FOOTBALL_KEY ?? process.env.API_SPORTS_KEY;
   if (!key) throw new Error("API-Football is not configured");
@@ -398,34 +439,19 @@ async function apiGet<T>(
     if (value !== undefined) url.searchParams.set(keyName, String(value));
   });
 
-  const response = await fetch(url, {
-    headers: { "x-apisports-key": key },
-    next: { revalidate },
-    signal: AbortSignal.timeout(12000),
+  const persist = persistenceEnabled();
+  const cacheId = cacheKey(pathname, params, footballCacheNamespace());
+  const policy = cachePolicy(pathname, params, FOOTBALL_DATA_MODE);
+  return footballRequester<T>({
+    url, apiKey: key, pathname, params, cacheKey: cacheId, persistence: persist,
+    ttlSeconds: Math.min(revalidate, policy.ttlSeconds), staleSeconds: policy.staleSeconds,
+    essential: isEssentialRequest(pathname, params),
+    cooldownMilliseconds: quotaConfig().cooldownMs,
+    validateResponse: isObjectArray,
+    onFreshness,
   });
-
-  recordProviderResponse(response.headers);
-
-  if (!response.ok) {
-    throw new Error(
-      `API-Football request failed: endpoint=${pathname} status=${response.status} params=${JSON.stringify(params)}`,
-    );
-  }
-
-  const data = (await response.json()) as ApiResponse<T>;
-  const providerError = apiErrorDetail(data.errors);
-  if (providerError) {
-    throw new Error(
-      `API-Football provider error: endpoint=${pathname} params=${JSON.stringify(params)} errors=${providerError}`,
-    );
-  }
-
-  if (typeof data.results === "number" && data.results === 0) return [];
-  if (!Array.isArray(data.response)) {
-    throw new Error(`API-Football returned an invalid response for ${pathname}`);
-  }
-  return data.response;
 }
+
 
 function mapLineupPlayer(entry: { player?: { id?: number | null; name?: string | null; number?: number | null; pos?: string | null; grid?: string | null } }): FixtureLineupPlayer {
   return {
@@ -489,7 +515,7 @@ function mapPlayerPerformance(entry: NonNullable<NonNullable<ApiFootballFixture[
   };
 }
 
-function mapFixture(item: ApiFootballFixture): Fixture | null {
+function mapFixture(item: ApiFootballFixture, freshness?: RequestFreshness): Fixture | null {
   if (
     !validPositiveId(item?.fixture?.id)
     || !validDateLike(item?.fixture?.date)
@@ -598,11 +624,12 @@ function mapFixture(item: ApiFootballFixture): Fixture | null {
       },
       players: (teamPlayers.players ?? []).map(mapPlayerPerformance),
     })),
+    freshness,
   };
 }
 
-function validFixtures(data: ApiFootballFixture[]) {
-  return data.map(mapFixture).filter((item): item is Fixture => item !== null);
+function validFixtures(data: ApiFootballFixture[], freshness?: RequestFreshness) {
+  return data.map((item) => mapFixture(item, freshness)).filter((item): item is Fixture => item !== null);
 }
 
 function mapTeam(item: ApiTeam): TeamProfile | null {
@@ -651,17 +678,30 @@ export function competitionsFromFixtures(fixtures: Fixture[]): FixtureCompetitio
 }
 
 export async function getFixturesByDate(date: string): Promise<Fixture[]> {
+  if (!fixtureDateAllowed(date)) throw new Error("This fixture date is outside the configured API-Football plan window.");
+  let freshness: RequestFreshness | undefined;
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     { date, timezone: TIMEZONE },
     FOOTBALL_DATA_MODE === "current" ? 60 : 1800,
+    (value) => { freshness = value; },
   );
-  return validFixtures(data);
+  return validFixtures(data, freshness);
 }
 
 export async function getFixtureById(id: number): Promise<Fixture | null> {
-  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, FOOTBALL_DATA_MODE === "current" ? 60 : 900);
-  return data[0] ? mapFixture(data[0]) : null;
+  let freshness: RequestFreshness | undefined;
+  const data = await apiGet<ApiFootballFixture>("/fixtures", { id }, FOOTBALL_DATA_MODE === "current" ? 60 : 900, (value) => { freshness = value; });
+  return data[0] ? mapFixture(data[0], freshness) : null;
+}
+
+export async function getFixturesByIds(ids: number[]): Promise<Fixture[]> {
+  if (process.env.API_FOOTBALL_FIXTURE_BATCHING_ENABLED?.trim().toLowerCase() !== "true") {
+    throw new Error("Fixture batching is disabled until subscription support is verified");
+  }
+  let freshness: RequestFreshness | undefined;
+  const data = await apiGet<ApiFootballFixture>("/fixtures", { ids: fixtureIdsParameter(ids) }, FOOTBALL_DATA_MODE === "current" ? 60 : 900, (value) => { freshness = value; });
+  return validFixtures(data, freshness);
 }
 
 export async function getFootballLeagueCatalog(): Promise<LeagueCatalogItem[]> {
@@ -711,6 +751,7 @@ async function getLeagueTeamsFor(ref: LeagueCatalogItem): Promise<TeamProfile[]>
 
 async function getLeagueFixturesFor(ref: LeagueCatalogItem): Promise<Fixture[]> {
   const today = footballQueryDate();
+  let freshness: RequestFreshness | undefined;
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     {
@@ -721,8 +762,9 @@ async function getLeagueFixturesFor(ref: LeagueCatalogItem): Promise<Fixture[]> 
       timezone: TIMEZONE,
     },
     43200,
+    (value) => { freshness = value; },
   );
-  return validFixtures(data);
+  return validFixtures(data, freshness);
 }
 
 async function getStandingsFor(ref: LeagueCatalogItem): Promise<StandingRow[]> {
@@ -835,10 +877,12 @@ export async function getTeamFixtures(teamId: number): Promise<Fixture[]> {
     ? { team: teamId, season: FOOTBALL_FREE_SEASON, last: 8, timezone: TIMEZONE }
     : { team: teamId, next: 8, timezone: TIMEZONE };
 
+  let freshness: RequestFreshness | undefined;
   const data = await apiGet<ApiFootballFixture>(
     "/fixtures",
     params,
     1800,
+    (value) => { freshness = value; },
   );
-  return validFixtures(data);
+  return validFixtures(data, freshness);
 }

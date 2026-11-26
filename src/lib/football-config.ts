@@ -18,13 +18,32 @@ function normalizedMode(): FootballDataMode {
 }
 
 function configuredFreeSeason() {
-  const raw = Number(process.env.API_FOOTBALL_FREE_SEASON ?? "2024");
-  return Number.isInteger(raw) && raw >= 1900 && raw <= 2200 ? raw : 2024;
+  const raw = process.env.API_FOOTBALL_FREE_SEASON?.trim();
+  if (!raw) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1900 || value > 2200) throw new Error("API_FOOTBALL_FREE_SEASON must be a four-digit year");
+  return value;
 }
 
 export const FOOTBALL_DATA_MODE = normalizedMode();
 export const FOOTBALL_FREE_SEASON = configuredFreeSeason();
 export const FOOTBALL_SOURCE_TIMEZONE = (process.env.FOOTBALL_SOURCE_TIMEZONE ?? "UTC").trim() || "UTC";
+
+export function footballCacheNamespace() {
+  const baseUrl = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
+  let providerOrigin: string;
+  try { providerOrigin = new URL(baseUrl).origin; }
+  catch { throw new Error("API_FOOTBALL_BASE_URL must be a valid URL"); }
+  return JSON.stringify({
+    schema: 2,
+    providerOrigin,
+    mode: FOOTBALL_DATA_MODE,
+    freeSeason: FOOTBALL_FREE_SEASON ?? null,
+    freeDateFrom: process.env.API_FOOTBALL_FREE_DATE_FROM ?? null,
+    freeDateTo: process.env.API_FOOTBALL_FREE_DATE_TO ?? null,
+    fixtureBatching: process.env.API_FOOTBALL_FIXTURE_BATCHING_ENABLED?.trim().toLowerCase() === "true",
+  });
+}
 
 export function selectFootballSeason<T extends SeasonLike>(seasons: T[]): T | undefined {
   if (!seasons.length) return undefined;
@@ -34,33 +53,29 @@ export function selectFootballSeason<T extends SeasonLike>(seasons: T[]): T | un
       ?? seasons.slice().sort((a, b) => b.year - a.year)[0];
   }
 
-  return seasons.find((season) => season.year === FOOTBALL_FREE_SEASON)
-    ?? seasons
-      .filter((season) => season.year <= FOOTBALL_FREE_SEASON)
-      .sort((a, b) => b.year - a.year)[0];
+  if (FOOTBALL_FREE_SEASON !== undefined) {
+    return seasons.find((season) => season.year === FOOTBALL_FREE_SEASON)
+      ?? seasons.filter((season) => season.year <= FOOTBALL_FREE_SEASON).sort((a, b) => b.year - a.year)[0];
+  }
+  return seasons.find((season) => season.current)
+    ?? seasons.slice().sort((a, b) => b.year - a.year)[0];
 }
 
 export function footballQueryDate(date = new Date()) {
-  const utcMonth = date.getUTCMonth();
-  const utcDay = date.getUTCDate();
+  return date.toISOString().slice(0, 10);
+}
 
-  if (FOOTBALL_DATA_MODE === "current") {
-    return date.toISOString().slice(0, 10);
-  }
-
-  const candidate = new Date(Date.UTC(FOOTBALL_FREE_SEASON, utcMonth, utcDay, 12));
-  if (candidate.getUTCMonth() !== utcMonth) {
-    const lastDay = new Date(Date.UTC(FOOTBALL_FREE_SEASON, utcMonth + 1, 0, 12));
-    return lastDay.toISOString().slice(0, 10);
-  }
-
-  return candidate.toISOString().slice(0, 10);
+export function fixtureDateAllowed(date: string, now = new Date()) {
+  if (FOOTBALL_DATA_MODE === "current") return true;
+  const configured = process.env.API_FOOTBALL_FREE_DATE_FROM && process.env.API_FOOTBALL_FREE_DATE_TO;
+  if (!configured) return true;
+  return date >= process.env.API_FOOTBALL_FREE_DATE_FROM! && date <= process.env.API_FOOTBALL_FREE_DATE_TO!;
 }
 
 export function footballDataContext() {
   return {
     mode: FOOTBALL_DATA_MODE,
-    freeSeason: FOOTBALL_FREE_SEASON,
+    freeSeason: FOOTBALL_FREE_SEASON ?? null,
     sourceTimezone: FOOTBALL_SOURCE_TIMEZONE,
     isHistoricalDevelopmentData: FOOTBALL_DATA_MODE === "free",
   };

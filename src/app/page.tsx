@@ -7,14 +7,11 @@ import { StatusFilter } from "@/components/StatusFilter";
 import { competitionsFromFixtures, getFixturesByDate, type Fixture } from "@/lib/football";
 import { footballDataContext, footballQueryDate } from "@/lib/football-config";
 import { slugify } from "@/lib/slug";
+import { classifyFixtureStatus, isFinishedFixtureStatus, isLiveFixtureStatus } from "@/lib/football-status";
 
 type PageProps = {
   searchParams: Promise<{ league?: string; status?: string }>;
 };
-
-const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE"]);
-const FINISHED_STATUSES = new Set(["FT", "AET", "PEN"]);
-const SCHEDULED_STATUSES = new Set(["NS", "TBD"]);
 
 export default async function Home({ searchParams }: PageProps) {
   const query = await searchParams;
@@ -47,11 +44,11 @@ export default async function Home({ searchParams }: PageProps) {
     : dayFixtures;
 
   if (status === "live") {
-    fixtures = fixtures.filter((fixture) => LIVE_STATUSES.has(fixture.status));
+    fixtures = fixtures.filter((fixture) => isLiveFixtureStatus(fixture.status));
   } else if (status === "finished") {
-    fixtures = fixtures.filter((fixture) => FINISHED_STATUSES.has(fixture.status));
+    fixtures = fixtures.filter((fixture) => isFinishedFixtureStatus(fixture.status));
   } else if (status === "scheduled") {
-    fixtures = fixtures.filter((fixture) => SCHEDULED_STATUSES.has(fixture.status));
+    fixtures = fixtures.filter((fixture) => classifyFixtureStatus(fixture.status) === "scheduled");
   }
 
   return (
@@ -77,7 +74,7 @@ export default async function Home({ searchParams }: PageProps) {
           <section className="scorePanel">
             {dataContext.isHistoricalDevelopmentData ? (
               <div className="notice">
-                Free-plan development mode is using season {dataContext.freeSeason} data. Visitor times are shown in each viewer&apos;s local timezone.
+                Free-plan development mode uses provider league metadata{dataContext.freeSeason ? ` with configured season ${dataContext.freeSeason}` : " to select an available season"}. Visitor times are shown in each viewer&apos;s local timezone.
               </div>
             ) : null}
 
