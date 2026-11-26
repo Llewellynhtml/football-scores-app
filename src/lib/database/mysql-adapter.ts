@@ -4,6 +4,7 @@ import { validateCacheRow, type CacheRow } from "@/lib/football-cache";
 import type { DispatchResult, QuotaReservationResult } from "@/lib/football-persistence";
 import type { FootballPersistenceAdapter } from "@/lib/database/types";
 import { withMysqlConnection, withMysqlTransaction } from "@/lib/database/mysql-transactions";
+import { mariaDbDateTime, normalizeMariaDbCacheTimestamps } from "@/lib/database/mysql-timestamps";
 
 type AttemptRow = RowDataPacket & {
   quota_scope: string;
@@ -22,12 +23,6 @@ type AttemptRow = RowDataPacket & {
 function uuidBytes(uuid: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid)) throw new Error("Invalid UUID");
   return Buffer.from(uuid.replaceAll("-", ""), "hex");
-}
-
-function mysqlDate(iso: string) {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.valueOf())) throw new Error("Invalid UTC timestamp");
-  return date.toISOString().slice(0, 23).replace("T", " ");
 }
 
 function validateLimit(limit: number) {
@@ -54,7 +49,7 @@ export const mysqlAdapter: FootballPersistenceAdapter = {
       );
       if (!rows[0]) return null;
       const payload = typeof rows[0].payload === "string" ? JSON.parse(rows[0].payload) : rows[0].payload;
-      return validateCacheRow({ ...rows[0], payload }, allowStale);
+      return validateCacheRow(normalizeMariaDbCacheTimestamps({ ...rows[0], payload }), allowStale);
     });
   },
   async acquireCacheLease(key, ownerToken, leaseSeconds) {
@@ -87,7 +82,7 @@ export const mysqlAdapter: FootballPersistenceAdapter = {
         `INSERT INTO football_provider_cache (cache_key, payload, expires_at, stale_until, updated_at)
          VALUES (?, ?, ?, ?, UTC_TIMESTAMP(6))
          ON DUPLICATE KEY UPDATE payload=VALUES(payload), expires_at=VALUES(expires_at), stale_until=VALUES(stale_until), updated_at=VALUES(updated_at)`,
-        [input.key, JSON.stringify(input.payload), mysqlDate(input.expiresAt), mysqlDate(input.staleUntil)],
+        [input.key, JSON.stringify(input.payload), mariaDbDateTime(input.expiresAt), mariaDbDateTime(input.staleUntil)],
       );
       await connection.execute("DELETE FROM football_cache_leases WHERE cache_key = ? AND owner_token = ?", [input.key, owner]);
       return true;
@@ -101,7 +96,7 @@ export const mysqlAdapter: FootballPersistenceAdapter = {
   },
   async reserveProviderQuota(input): Promise<QuotaReservationResult> {
     if (!/^[A-Za-z0-9_.:-]{1,100}$/.test(input.quotaScope)) return "INVALID_REQUEST";
-    const attemptedAt = mysqlDate(input.attemptedAt);
+    const attemptedAt = mariaDbDateTime(input.attemptedAt);
     return withMysqlTransaction("quota.reserve", async (connection) => {
       await lockQuotaScope(connection, input.quotaScope);
       const [clockRows] = await connection.query<(RowDataPacket & { now_utc: string; day_utc: string; in_range: number })[]>(
@@ -196,10 +191,14 @@ export const mysqlAdapter: FootballPersistenceAdapter = {
       await lockQuotaScope(connection, event.quotaScope);
       const attempt = await currentAttempt(connection, event.attemptId);
       if (!attempt || attempt.quota_scope !== event.quotaScope || !["DISPATCHED", "UNKNOWN_OUTCOME"].includes(attempt.state)) return false;
-      if (mysqlDate(event.attemptedAt) !== attempt.attempted_at) return false;
+      const [timestampIdentity] = await connection.execute<(RowDataPacket & { matches_attempted_at: number })[]>(
+        "SELECT attempted_at = ? matches_attempted_at FROM football_api_attempts WHERE attempt_id = ?",
+        [mariaDbDateTime(event.attemptedAt), uuidBytes(event.attemptId)],
+      );
+      if (timestampIdentity[0]?.matches_attempted_at !== 1) return false;
       await connection.execute(
         `UPDATE football_api_attempts SET state='FINALISED',finalised_at=UTC_TIMESTAMP(6),outcome=?,http_status=?,provider_limit=?,provider_remaining=?,provider_minute_limit=?,provider_minute_remaining=?,quota_observed_at=? WHERE attempt_id=?`,
-        [event.outcome,event.status,event.providerLimit,event.providerRemaining,event.providerMinuteLimit,event.providerMinuteRemaining,event.quotaObservedAt ? mysqlDate(event.quotaObservedAt) : null,uuidBytes(event.attemptId)],
+        [event.outcome,event.status,event.providerLimit,event.providerRemaining,event.providerMinuteLimit,event.providerMinuteRemaining,event.quotaObservedAt ? mariaDbDateTime(event.quotaObservedAt) : null,uuidBytes(event.attemptId)],
       );
       await connection.execute(
         `INSERT INTO football_api_usage_daily
@@ -212,7 +211,7 @@ export const mysqlAdapter: FootballPersistenceAdapter = {
          provider_minute_limit=IF(VALUES(quota_observed_at) IS NOT NULL AND (quota_observed_at IS NULL OR VALUES(quota_observed_at)>=quota_observed_at),COALESCE(VALUES(provider_minute_limit),provider_minute_limit),provider_minute_limit),
          provider_minute_remaining=IF(VALUES(quota_observed_at) IS NOT NULL AND (quota_observed_at IS NULL OR VALUES(quota_observed_at)>=quota_observed_at),COALESCE(VALUES(provider_minute_remaining),provider_minute_remaining),provider_minute_remaining),
          quota_observed_at=IF(VALUES(quota_observed_at) IS NULL,quota_observed_at,GREATEST(COALESCE(quota_observed_at,VALUES(quota_observed_at)),VALUES(quota_observed_at))),last_call_at=GREATEST(last_call_at,VALUES(last_call_at))`,
-        [event.quotaScope,attempt.usage_day,event.outcome === "success" ? 0 : 1,event.outcome === "success" ? 1 : 0,event.outcome === "http_error" ? 1 : 0,event.outcome === "provider_error" ? 1 : 0,event.outcome === "network_error" ? 1 : 0,event.outcome === "timeout" ? 1 : 0,event.providerLimit,event.providerRemaining,event.providerMinuteLimit,event.providerMinuteRemaining,attempt.attempted_at,event.quotaObservedAt ? mysqlDate(event.quotaObservedAt) : null],
+        [event.quotaScope,attempt.usage_day,event.outcome === "success" ? 0 : 1,event.outcome === "success" ? 1 : 0,event.outcome === "http_error" ? 1 : 0,event.outcome === "provider_error" ? 1 : 0,event.outcome === "network_error" ? 1 : 0,event.outcome === "timeout" ? 1 : 0,event.providerLimit,event.providerRemaining,event.providerMinuteLimit,event.providerMinuteRemaining,attempt.attempted_at,event.quotaObservedAt ? mariaDbDateTime(event.quotaObservedAt) : null],
       );
       return true;
     });

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 import { mysqlAdapter } from "../src/lib/database/mysql-adapter.ts";
 import { getMysqlPool } from "../src/lib/database/mysql-pool.ts";
+import { mariaDbDateTime } from "../src/lib/database/mysql-timestamps.ts";
 import { requireIsolatedLocalMariaDb, requireLoopbackMockProvider } from "./lib/mariadb-local-guard.mjs";
 
 requireIsolatedLocalMariaDb("adapter contract tests");
@@ -39,7 +40,7 @@ try {
   assert.equal(await mysqlAdapter.releaseCacheLease(rollbackKey, rollbackOwner), true);
   assert.equal((await mysqlAdapter.health()).ok, true);
 
-  async function verifyQuotaLimit(quotaScope: string, limits: { dailyLimit: number; reserve: number; minuteLimit: number; minuteReserve: number }, rejectedAs: "DAILY_LIMIT_REACHED" | "MINUTE_LIMIT_REACHED") {
+  async function verifyQuotaLimit(quotaScope: string, limits: { dailyLimit: number; reserve: number; minuteLimit: number; minuteReserve: number }, rejectedAs: "DAILY_LIMIT_REACHED" | "MINUTE_LIMIT_REACHED", outcome: "success" | "http_error") {
     auxiliaryScopes.push(quotaScope);
     const attemptedAt = new Date().toISOString();
     const attempts = [randomUUID(), randomUUID()];
@@ -49,30 +50,48 @@ try {
     const acquired = attempts[reservations.indexOf("ACQUIRED")];
     assert.equal(await mysqlAdapter.dispatchProviderAttempt(acquired, quotaScope), "DISPATCHED");
     assert.equal(await mysqlAdapter.dispatchProviderAttempt(acquired, quotaScope), "ALREADY_DISPATCHED");
-    const event = { attemptId: acquired, quotaScope, attemptedAt, outcome: "success" as const, status: 200, providerLimit: 100, providerRemaining: 99, providerMinuteLimit: 100, providerMinuteRemaining: 99, quotaObservedAt: new Date().toISOString() };
-    assert.equal(await mysqlAdapter.finaliseProviderAttempt(event), true);
+    const event = { attemptId: acquired, quotaScope, attemptedAt, outcome, status: outcome === "success" ? 200 : 503, providerLimit: 100, providerRemaining: 99, providerMinuteLimit: 100, providerMinuteRemaining: 99, quotaObservedAt: new Date().toISOString() };
+    assert.equal(await mysqlAdapter.finaliseProviderAttempt({ ...event, attemptedAt: new Date(Date.parse(attemptedAt) + 1).toISOString() }), false);
+    const wrongScope = `${quotaScope}-wrong`;
+    auxiliaryScopes.push(wrongScope);
+    assert.equal(await mysqlAdapter.finaliseProviderAttempt({ ...event, quotaScope: wrongScope }), false);
+    const [[negativeState]] = await connection.execute<(RowDataPacket & { state: string; usage_rows: number })[]>("SELECT state,(SELECT COUNT(*) FROM football_api_usage_daily WHERE quota_scope=?) usage_rows FROM football_api_attempts WHERE attempt_id=UNHEX(REPLACE(?,'-',''))", [quotaScope, acquired]);
+    assert.equal(negativeState.state, "DISPATCHED");
+    assert.equal(Number(negativeState.usage_rows), 0);
+    const [[identityDiagnostic]] = await connection.execute<(RowDataPacket & { state: string; timestamp_matches: number })[]>("SELECT state,attempted_at=? timestamp_matches FROM football_api_attempts WHERE attempt_id=UNHEX(REPLACE(?,'-',''))", [mariaDbDateTime(attemptedAt), acquired]);
+    const finalisations = await Promise.all([mysqlAdapter.finaliseProviderAttempt(event), mysqlAdapter.finaliseProviderAttempt(event)]);
+    assert.equal(finalisations.filter(Boolean).length, 1, `finalisation diagnostic: state=${identityDiagnostic.state}, timestamp_matches=${identityDiagnostic.timestamp_matches}`);
     assert.equal(await mysqlAdapter.finaliseProviderAttempt(event), false);
     const usage = await mysqlAdapter.readDailyUsage(new Date().toISOString().slice(0, 10), quotaScope);
     assert.equal(Number(usage?.outbound_calls), 1);
+    assert.equal(Number(usage?.successful_responses), outcome === "success" ? 1 : 0);
+    assert.equal(Number(usage?.http_errors), outcome === "http_error" ? 1 : 0);
   }
 
-  await verifyQuotaLimit(`${prefix}-daily`, { dailyLimit: 1, reserve: 0, minuteLimit: 100, minuteReserve: 0 }, "DAILY_LIMIT_REACHED");
-  await verifyQuotaLimit(`${prefix}-minute`, { dailyLimit: 100, reserve: 0, minuteLimit: 1, minuteReserve: 0 }, "MINUTE_LIMIT_REACHED");
+  await verifyQuotaLimit(`${prefix}-daily`, { dailyLimit: 1, reserve: 0, minuteLimit: 100, minuteReserve: 0 }, "DAILY_LIMIT_REACHED", "success");
+  await verifyQuotaLimit(`${prefix}-minute`, { dailyLimit: 100, reserve: 0, minuteLimit: 1, minuteReserve: 0 }, "MINUTE_LIMIT_REACHED", "http_error");
 
   const unknownScope = `${prefix}-unknown`;
   auxiliaryScopes.push(unknownScope);
   const unknownAttempt = randomUUID();
+  const unknownAttemptedAt = new Date(Date.now() - 4 * 60_000).toISOString();
   const cleanupTrigger = randomUUID();
   const generous = { dailyLimit: 100, reserve: 0, minuteLimit: 100, minuteReserve: 0 };
-  assert.equal(await mysqlAdapter.reserveProviderQuota({ attemptId: unknownAttempt, attemptedAt: new Date().toISOString(), quotaScope: unknownScope, essential: true, limits: generous }), "ACQUIRED");
+  assert.equal(await mysqlAdapter.reserveProviderQuota({ attemptId: unknownAttempt, attemptedAt: unknownAttemptedAt, quotaScope: unknownScope, essential: true, limits: generous }), "ACQUIRED");
   assert.equal(await mysqlAdapter.dispatchProviderAttempt(unknownAttempt, unknownScope), "DISPATCHED");
-  await connection.execute("UPDATE football_api_attempts SET attempted_at=TIMESTAMPADD(MINUTE,-4,UTC_TIMESTAMP(6)),reserved_at=TIMESTAMPADD(MINUTE,-4,UTC_TIMESTAMP(6)),reservation_expires_at=TIMESTAMPADD(MINUTE,-2,UTC_TIMESTAMP(6)),dispatched_at=TIMESTAMPADD(MINUTE,-3,UTC_TIMESTAMP(6)) WHERE attempt_id=UNHEX(REPLACE(?, '-', ''))", [unknownAttempt]);
+  await connection.execute("UPDATE football_api_attempts SET reserved_at=TIMESTAMPADD(MINUTE,-4,UTC_TIMESTAMP(6)),reservation_expires_at=TIMESTAMPADD(MINUTE,-2,UTC_TIMESTAMP(6)),dispatched_at=TIMESTAMPADD(MINUTE,-3,UTC_TIMESTAMP(6)) WHERE attempt_id=UNHEX(REPLACE(?, '-', ''))", [unknownAttempt]);
   const [[agedAttempt]] = await connection.execute<(RowDataPacket & { lifecycle_ordered: number; dispatch_aged: number })[]>("SELECT attempted_at<=reserved_at AND reserved_at<dispatched_at AND dispatched_at<reservation_expires_at lifecycle_ordered,dispatched_at<=TIMESTAMPADD(MINUTE,-2,UTC_TIMESTAMP(6)) dispatch_aged FROM football_api_attempts WHERE attempt_id=UNHEX(REPLACE(?, '-', ''))", [unknownAttempt]);
   assert.equal(Number(agedAttempt.lifecycle_ordered), 1);
   assert.equal(Number(agedAttempt.dispatch_aged), 1);
   assert.equal(await mysqlAdapter.reserveProviderQuota({ attemptId: cleanupTrigger, attemptedAt: new Date().toISOString(), quotaScope: unknownScope, essential: true, limits: generous }), "ACQUIRED");
   const [[unknownRow]] = await connection.execute<(RowDataPacket & { state: string })[]>("SELECT state FROM football_api_attempts WHERE attempt_id=UNHEX(REPLACE(?, '-', ''))", [unknownAttempt]);
   assert.equal(unknownRow.state, "UNKNOWN_OUTCOME");
+  const unknownEvent = { attemptId: unknownAttempt, quotaScope: unknownScope, attemptedAt: unknownAttemptedAt, outcome: "network_error" as const, status: null, providerLimit: null, providerRemaining: null, providerMinuteLimit: null, providerMinuteRemaining: null, quotaObservedAt: null };
+  assert.equal(await mysqlAdapter.finaliseProviderAttempt(unknownEvent), true);
+  assert.equal(await mysqlAdapter.finaliseProviderAttempt(unknownEvent), false);
+  const unknownUsage = await mysqlAdapter.readDailyUsage(new Date().toISOString().slice(0, 10), unknownScope);
+  assert.equal(Number(unknownUsage?.outbound_calls), 1);
+  assert.equal(Number(unknownUsage?.network_errors), 1);
 
   const rolloverScope = `${prefix}-rollover`;
   auxiliaryScopes.push(rolloverScope);
