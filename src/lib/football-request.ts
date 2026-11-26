@@ -1,5 +1,6 @@
 import { parseProviderEnvelope } from "@/lib/football-provider-contract";
 import type { DispatchResult, QuotaReservationResult } from "@/lib/football-persistence";
+import { syntheticProviderPolicy, verifySyntheticDispatch, verifySyntheticResponse } from "@/lib/football-synthetic-provider";
 
 export type RequestOutcome = "success" | "http_error" | "provider_error" | "network_error" | "timeout";
 export type RequestCacheEntry = { response: unknown[]; stale: boolean; staleUntil: string; updatedAt?: string | null };
@@ -150,11 +151,15 @@ export function createFootballRequester(deps: FootballRequestDependencies) {
     let outcome: RequestOutcome | undefined;
     deps.recordAttempt(attemptId, attemptedAt);
     try {
+      const syntheticPolicy = syntheticProviderPolicy();
+      verifySyntheticDispatch(request.url, request.apiKey, syntheticPolicy);
       response = await deps.fetch(request.url, {
         headers: { "x-apisports-key": request.apiKey },
         ...(request.persistence ? { cache: "no-store" as const } : { next: { revalidate: request.ttlSeconds } }),
+        redirect: "manual",
         signal: AbortSignal.timeout(12000),
       });
+      verifySyntheticResponse(response, syntheticPolicy);
       if (!response.ok) {
         outcome = "http_error";
         if (response.status === 429) quotaCooldownUntil = Date.now() + (request.cooldownMilliseconds ?? 300_000);

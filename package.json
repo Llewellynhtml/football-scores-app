@@ -16,6 +16,7 @@
     "db:mariadb:maintenance": "node scripts/mariadb-maintenance.mjs",
     "db:mariadb:capacity": "node scripts/mariadb-capacity.mjs",
     "test:mariadb:integration": "node scripts/test-mariadb-integration.mjs",
+    "test:mariadb:migration-integrity": "node scripts/test-mariadb-migration-integrity.mjs",
     "test:mariadb:adapter": "node --conditions=react-server --import tsx scripts/test-mariadb-adapter.mts",
     "test:mariadb:load": "node scripts/load-test-mariadb.mjs",
     "test:mariadb:restore": "node scripts/verify-mariadb-restore.mjs",

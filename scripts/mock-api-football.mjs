@@ -6,7 +6,7 @@ const delayMs = Number(process.env.MOCK_API_FOOTBALL_DELAY_MS ?? 150);
 const counters = new Map();
 
 function send(response, status, body, headers = {}) {
-  response.writeHead(status, { "content-type": "application/json", ...headers });
+  response.writeHead(status, { "content-type": "application/json", "x-football-synthetic": "true", ...headers });
   response.end(JSON.stringify(body));
 }
 

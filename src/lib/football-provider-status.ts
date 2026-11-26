@@ -1,5 +1,6 @@
 import "server-only";
 import { parseProviderEnvelope } from "@/lib/football-provider-contract";
+import { syntheticProviderPolicy, verifySyntheticDispatch, verifySyntheticResponse } from "@/lib/football-synthetic-provider";
 
 type StatusResponse = {
   subscription: { plan?: unknown; active?: unknown; end?: unknown };
@@ -17,9 +18,13 @@ export async function reconcileProviderStatus() {
   const key = process.env.API_FOOTBALL_KEY ?? process.env.API_SPORTS_KEY;
   if (!key) throw new Error("API-Football is not configured");
   const base = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
-  const response = await fetch(new URL("/status", base), {
-    headers: { "x-apisports-key": key }, cache: "no-store", signal: AbortSignal.timeout(8000),
+  const url = new URL("/status", base);
+  const policy = syntheticProviderPolicy();
+  verifySyntheticDispatch(url, key, policy);
+  const response = await fetch(url, {
+    headers: { "x-apisports-key": key }, cache: "no-store", redirect: "manual", signal: AbortSignal.timeout(8000),
   });
+  verifySyntheticResponse(response, policy);
   if (!response.ok) throw new Error(`Provider status unavailable (${response.status})`);
   const envelope = parseProviderEnvelope(await response.json(), validStatus);
   const subscription = envelope.response.subscription;
